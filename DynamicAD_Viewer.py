@@ -75,20 +75,20 @@ class DynamicAD_Viewer(QtGui.QWidget):
         self.dataDir=os.getcwd()
         self.onPixelSizeChanged()
         self.detPV=self.detPVLineEdit.text()
-        # try:
-        self.adReader=AD_Reader(parent=self,detPV=self.detPV)
-        self.horROIWidthSpinBox.setMaximum(self.adReader.sizeX)
-        self.verROIWidthSpinBox.setMaximum(self.adReader.sizeY)
-        self.ROIWinX=self.horROIWidthSpinBox.value()
-        self.ROIWinY=self.verROIWidthSpinBox.value()
-        self.create_PlotLayout()
-        self.init_signals()
-        self.imageSizeXLineEdit.setText('%d'%self.adReader.sizeX)
-        self.imageSizeYLineEdit.setText('%d'%self.adReader.sizeY)
-        # except:
-        #      QtGui.QMessageBox.warning(self,"Connection Error","Please check the Detector IOC is running. Quiting the "
-        #                                                        "software for now.",QtGui.QMessageBox.Ok)
-             # self.close()
+        try:
+            self.adReader=AD_Reader(parent=self,detPV=self.detPV)
+            self.horROIWidthSpinBox.setMaximum(self.adReader.sizeX)
+            self.verROIWidthSpinBox.setMaximum(self.adReader.sizeY)
+            self.ROIWinX=self.horROIWidthSpinBox.value()
+            self.ROIWinY=self.verROIWidthSpinBox.value()
+            self.create_PlotLayout()
+            self.init_signals()
+            self.imageSizeXLineEdit.setText('%d'%self.adReader.sizeX)
+            self.imageSizeYLineEdit.setText('%d'%self.adReader.sizeY)
+        except:
+             QtGui.QMessageBox.warning(self,"Connection Error","Please check the Detector IOC is running. Quiting the "
+                                                               "software for now.",QtGui.QMessageBox.Ok)
+             self.close()
 
     def validateFormat(self):
         self.intValidator=QtGui.QIntValidator()
@@ -190,8 +190,8 @@ class DynamicAD_Viewer(QtGui.QWidget):
         self.stopUpdatePushButton.setEnabled(True)
         self.setOutputOptions(enabled=False)
         self.detPVLineEdit.setEnabled(False)
-        epics.caput(self.detPV + "cam1:ArrayCounter", 0)
-        epics.caput(self.detPV + "cam1:Acquire",1)
+        epics.caput(BYTES2STR(self.detPV + "cam1:ArrayCounter"), 0)
+        epics.caput(BYTES2STR(self.detPV + "cam1:Acquire"),1)
 
     def onStopUpdate(self):
         self.startUpdate=False
@@ -199,8 +199,8 @@ class DynamicAD_Viewer(QtGui.QWidget):
         self.stopUpdatePushButton.setEnabled(False)
         self.setOutputOptions(enabled=True)
         self.detPVLineEdit.setEnabled(True)
-        epics.caput(self.detPV + "cam1:Acquire", 0)
-        epics.caput(self.detPV + "cam1:ArrayCounter",0)
+        epics.caput(BYTES2STR(self.detPV + "cam1:Acquire"), 0)
+        epics.caput(BYTES2STR(self.detPV + "cam1:ArrayCounter"),0)
 
 
     def setOutputOptions(self,enabled=True):
