@@ -16,6 +16,49 @@
   <layout class="QVBoxLayout" name="verticalLayout">
    <item>
     <layout class="QGridLayout" name="gridLayout">
+     <item row="2" column="0">
+      <widget class="QGroupBox" name="outputOptionsGroupBox">
+       <property name="title">
+        <string>Output Options</string>
+       </property>
+       <layout class="QVBoxLayout" name="verticalLayout_3">
+        <item>
+         <widget class="QPushButton" name="saveImagePushButton">
+          <property name="text">
+           <string>Save Image</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <spacer name="verticalSpacer_2">
+          <property name="orientation">
+           <enum>Qt::Vertical</enum>
+          </property>
+          <property name="sizeHint" stdset="0">
+           <size>
+            <width>20</width>
+            <height>40</height>
+           </size>
+          </property>
+         </spacer>
+        </item>
+        <item>
+         <widget class="QPushButton" name="saveVerProfilesPushButton">
+          <property name="text">
+           <string>Save Vertical Profiles</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QPushButton" name="saveHorProfilesPushButton">
+          <property name="text">
+           <string>Save Horizontal Profiles</string>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </widget>
+     </item>
      <item row="0" column="1">
       <widget class="GraphicsLayoutWidget" name="horSumLayout">
        <property name="sizePolicy">
@@ -128,48 +171,11 @@
      <item row="1" column="1">
       <widget class="GraphicsLayoutWidget" name="imageLayout"/>
      </item>
+     <item row="0" column="2">
+      <widget class="GraphicsLayoutWidget" name="timeSeriesPosLayout"/>
+     </item>
      <item row="2" column="2">
-      <widget class="QGroupBox" name="outputOptionsGroupBox">
-       <property name="title">
-        <string>Output Options</string>
-       </property>
-       <layout class="QVBoxLayout" name="verticalLayout_3">
-        <item>
-         <widget class="QPushButton" name="saveImagePushButton">
-          <property name="text">
-           <string>Save Image</string>
-          </property>
-         </widget>
-        </item>
-        <item>
-         <spacer name="verticalSpacer_2">
-          <property name="orientation">
-           <enum>Qt::Vertical</enum>
-          </property>
-          <property name="sizeHint" stdset="0">
-           <size>
-            <width>20</width>
-            <height>40</height>
-           </size>
-          </property>
-         </spacer>
-        </item>
-        <item>
-         <widget class="QPushButton" name="saveVerProfilesPushButton">
-          <property name="text">
-           <string>Save Vertical Profiles</string>
-          </property>
-         </widget>
-        </item>
-        <item>
-         <widget class="QPushButton" name="saveHorProfilesPushButton">
-          <property name="text">
-           <string>Save Horizontal Profiles</string>
-          </property>
-         </widget>
-        </item>
-       </layout>
-      </widget>
+      <widget class="GraphicsLayoutWidget" name="timeSeriesWidLayout"/>
      </item>
     </layout>
    </item>
@@ -221,6 +227,20 @@
         </size>
        </property>
       </spacer>
+     </item>
+     <item>
+      <widget class="QCheckBox" name="plotPosCheckBox">
+       <property name="text">
+        <string>Plot Pos</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QCheckBox" name="plotWidCheckBox">
+       <property name="text">
+        <string>Plot Wid</string>
+       </property>
+      </widget>
      </item>
      <item>
       <widget class="QPushButton" name="startUpdatePushButton">

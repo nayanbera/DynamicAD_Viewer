@@ -62,6 +62,8 @@ class AD_Reader(QtCore.QObject):
 
 class DynamicAD_Viewer(QtGui.QWidget):
     imageUpdated = QtCore.pyqtSignal(np.ndarray)
+    posTimeSeriesReady = QtCore.pyqtSignal()
+    widTimeSeriesReady = QtCore.pyqtSignal()
     def __init__(self, parent = None):
         """
         :param parent:
@@ -75,20 +77,20 @@ class DynamicAD_Viewer(QtGui.QWidget):
         self.dataDir=os.getcwd()
         self.onPixelSizeChanged()
         self.detPV=self.detPVLineEdit.text()
-        try:
-            self.adReader=AD_Reader(parent=self,detPV=self.detPV)
-            self.horROIWidthSpinBox.setMaximum(self.adReader.sizeX)
-            self.verROIWidthSpinBox.setMaximum(self.adReader.sizeY)
-            self.ROIWinX=self.horROIWidthSpinBox.value()
-            self.ROIWinY=self.verROIWidthSpinBox.value()
-            self.create_PlotLayout()
-            self.init_signals()
-            self.imageSizeXLineEdit.setText('%d'%self.adReader.sizeX)
-            self.imageSizeYLineEdit.setText('%d'%self.adReader.sizeY)
-        except:
-             QtGui.QMessageBox.warning(self,"Connection Error","Please check the Detector IOC is running. Quiting the "
-                                                               "software for now.",QtGui.QMessageBox.Ok)
-             self.close()
+        # try:
+        self.adReader=AD_Reader(parent=self,detPV=self.detPV)
+        self.horROIWidthSpinBox.setMaximum(self.adReader.sizeX)
+        self.verROIWidthSpinBox.setMaximum(self.adReader.sizeY)
+        self.ROIWinX=self.horROIWidthSpinBox.value()
+        self.ROIWinY=self.verROIWidthSpinBox.value()
+        self.create_PlotLayout()
+        self.init_signals()
+        self.imageSizeXLineEdit.setText('%d'%self.adReader.sizeX)
+        self.imageSizeYLineEdit.setText('%d'%self.adReader.sizeY)
+        # except:
+        #      QtGui.QMessageBox.warning(self,"Connection Error","Please check the Detector IOC is running. Quiting the "
+        #                                                        "software for now.",QtGui.QMessageBox.Ok)
+        #      self.close()
 
     def validateFormat(self):
         self.intValidator=QtGui.QIntValidator()
@@ -108,6 +110,9 @@ class DynamicAD_Viewer(QtGui.QWidget):
         self.saveImagePushButton.clicked.connect(self.saveImage)
         self.saveHorProfilesPushButton.clicked.connect(self.saveHorProfile)
         self.saveVerProfilesPushButton.clicked.connect(self.saveVerProfile)
+
+        self.posTimeSeriesReady.connect(self.updatePosSeriesPlot)
+        self.widTimeSeriesReady.connect(self.updateWidSeriesPlot)
 
     def saveImage(self):
         try:
@@ -185,6 +190,9 @@ class DynamicAD_Viewer(QtGui.QWidget):
 
     def onStartUpdate(self):
         self.startUpdate=True
+        self.startTime = time.time()
+        self.posTimeData = []
+        self.widTimeData = []
         self.start_stop_Update()
         self.startUpdatePushButton.setEnabled(False)
         self.stopUpdatePushButton.setEnabled(True)
@@ -223,8 +231,16 @@ class DynamicAD_Viewer(QtGui.QWidget):
     def create_PlotLayout(self):
         self.xValues=self.pixelSize*np.arange(self.adReader.sizeX)
         self.yValues=self.pixelSize*np.arange(self.adReader.sizeY)
-        self.vb = self.imageLayout.addViewBox(lockAspect=True)
-        self.imgPlot = pg.ImageItem(border='w')
+        #self.vb = self.imageLayout.addViewBox(lockAspect=True)
+        self.imagePlot = self.imageLayout.addPlot(title='2D Image')
+        self.imagePlot.setLabel('left',text='Y',units='m')
+        self.imagePlot.setLabel('bottom',text='X',units='m')
+        self.imagePlot.setAspectLocked(lock=True,ratio=1)
+        self.imgPlot = pg.ImageItem()
+        self.imgPlot.scale(self.pixelSize, self.pixelSize)
+        self.imagePlot.addItem(self.imgPlot)
+
+        self.vb = self.imagePlot.getViewBox()
         self.vb.scene().sigMouseClicked.connect(self.onClick)
         self.vb.addItem(self.imgPlot)
         self.vb.setRange(QtCore.QRectF(0, 0, self.adReader.sizeX, self.adReader.sizeY))
@@ -233,20 +249,26 @@ class DynamicAD_Viewer(QtGui.QWidget):
         self.imgPlot.setImage(self.imgData)
         self.verSum=self.verSumLayout.addPlot()#title='Vertical Sum')
         self.verSum.setLabel('left',text='Y',units='m')
-        self.verSum.setLabel('bottom',text='Vertical Sum')
+        self.verSum.setLabel('bottom',text='Vertical Sum', units='Cnts')
         self.horSum=self.horSumLayout.addPlot()#title='Horizontal Sum')
         self.horSum.setLabel('bottom',text='X',units='m')
-        self.horSum.setLabel('left', text='Horizontal Sum')
+        self.horSum.setLabel('left', text='Horizontal Sum', units='Cnts')
         self.verCut=self.verCutLayout.addPlot()#title='Vertical Cut')
         self.verCut.setLabel('left',text='Y',units='m')
-        self.verCut.setLabel('bottom', text='Vertical Cut')
+        self.verCut.setLabel('bottom', text='Vertical Cut', units='Cnts')
         self.horCut=self.horCutLayout.addPlot()#title='Horizontal Cut')
         self.horCut.setLabel('bottom', text='X', units='m')
-        self.horCut.setLabel('left', text='Horizontal Cut')
+        self.horCut.setLabel('left', text='Horizontal Cut', units='Cnts')
         left=int(self.adReader.sizeX/2)
         top=int(self.adReader.sizeY/2)
-        self.verLine=pg.LinearRegionItem(values=(left-self.ROIWinX/2,left+self.ROIWinX/2),orientation=pg.LinearRegionItem.Vertical,bounds=(0,self.adReader.sizeX))
-        self.horLine=pg.LinearRegionItem(values=(top-self.ROIWinX/2,top+self.ROIWinY/2),orientation=pg.LinearRegionItem.Horizontal,bounds=(0,self.adReader.sizeY))
+        self.verLine=pg.LinearRegionItem(values=((left - self.ROIWinX/2) * self.pixelSize,
+                                                 (left + self.ROIWinX/2) * self.pixelSize),
+                                                 orientation=pg.LinearRegionItem.Vertical,bounds=(0,
+                                                                                                  self.adReader.sizeX*self.pixelSize))
+        self.horLine=pg.LinearRegionItem(values=((top - self.ROIWinX/2) * self.pixelSize,
+                                                 (top + self.ROIWinY/2) * self.pixelSize),
+                                                 orientation=pg.LinearRegionItem.Horizontal,bounds=(0,
+                                                                                                    self.adReader.sizeY*self.pixelSize))
         self.vb.addItem(self.verLine)
         self.vb.addItem(self.horLine)
         self.verLine.sigRegionChanged.connect(self.onVerLineChanged)
@@ -254,22 +276,51 @@ class DynamicAD_Viewer(QtGui.QWidget):
         self.onVerLineChanged()
         self.onHorLineChanged()
         self.updatePlots()
+        self.imagePlot.setRange(xRange=(self.xValues[0], self.xValues[-1]), yRange = (self.yValues[0], self.yValues[
+            -1]))
+        self.imagePlot.setLimits(xMin = self.xValues[0], xMax=self.xValues[-1], yMin = self.yValues[0],
+                                 yMax = self.yValues[
+            -1])
+        self.verCut.setLimits(yMin = self.yValues[0],
+                                 yMax = self.yValues[
+            -1])
+        self.verSum.setLimits(yMin=self.yValues[0],
+                              yMax=self.yValues[
+                                  -1])
+        self.horCut.setLimits(xMin=self.xValues[0],
+                              xMax=self.xValues[
+                                  -1])
+        self.horSum.setLimits(xMin=self.xValues[0],
+                              xMax=self.xValues[
+                                  -1])
+        self.timePosSeries=self.timeSeriesPosLayout.addPlot()
+        self.timePosSeries.setLabel('left','X, Y Pos', units='m')
+        self.timePosSeries.setLabel('bottom','time',units='sec')
+        self.posSeriesLegend=pg.LegendItem(offset=(-0.1,0.8))
+        self.posSeriesLegend.setParentItem(self.timePosSeries)
+        self.timeWidSeries=self.timeSeriesWidLayout.addPlot()
+        self.timeWidSeries.setLabel('left', 'X, Y Wid', units='m')
+        self.timeWidSeries.setLabel('bottom', 'time', units='sec')
+        self.widSeriesLegend = pg.LegendItem(offset=(-0.1,0.8))
+        self.widSeriesLegend.setParentItem(self.timeWidSeries)
 
     def onClick(self,evt):
         pos=self.vb.mapSceneToView(evt.scenePos())
-        x,y=int(pos.x()),int(pos.y())
+        x,y=int(pos.x()/self.pixelSize),int(pos.y()/self.pixelSize)
         if 0<=x<self.adReader.sizeX and 0<=y<self.adReader.sizeY:
-            self.verLine.setRegion((x-self.ROIWinX/2,x+self.ROIWinX/2))
-            self.horLine.setRegion((y-self.ROIWinY/2,y+self.ROIWinY/2))
+            self.verLine.setRegion(((x - self.ROIWinX / 2) * self.pixelSize, (x + self.ROIWinX / 2) * self.pixelSize))
+            self.horLine.setRegion(((y - self.ROIWinY / 2) * self.pixelSize, (y + self.ROIWinY / 2) * self.pixelSize))
 
 
     def onVerLineChanged(self):
-        self.left,self.right=self.verLine.getRegion()
+        left,right=self.verLine.getRegion()
+        self.left,self.right=int(left/self.pixelSize),int(right/self.pixelSize)
         self.updateVerCut()
 
 
     def onHorLineChanged(self):
-        self.up,self.down=self.horLine.getRegion()
+        up,down=self.horLine.getRegion()
+        self.up,self.down=int(up/self.pixelSize),int(down/self.pixelSize)
         self.updateHorCut()
 
     def updateVerCut(self):
@@ -277,7 +328,7 @@ class DynamicAD_Viewer(QtGui.QWidget):
         try:
             self.verCutPlot.setData(self.verCutData,self.yValues)
         except:
-            self.verCutPlot=self.verCut.plot(self.verCutData,self.yValues)
+            self.verCutPlot=self.verCut.plot(self.verCutData,self.yValues, pen=pg.mkPen('y'))
         verCut = self.verCutData - np.min(self.verCutData)
         self.cutPeakY = np.sum(verCut * self.yValues) / np.sum(verCut)
         self.cutWidthY = np.sqrt(
@@ -289,7 +340,7 @@ class DynamicAD_Viewer(QtGui.QWidget):
         try:
             self.horCutPlot.setData(self.xValues,self.horCutData)
         except:
-            self.horCutPlot=self.horCut.plot(self.xValues,self.horCutData)
+            self.horCutPlot=self.horCut.plot(self.xValues,self.horCutData, pen=pg.mkPen('b'))
         horCut = self.horCutData - np.min(self.horCutData)
         self.cutPeakX = np.sum(horCut * self.xValues) / np.sum(horCut)
         self.cutWidthX = np.sqrt(
@@ -300,6 +351,68 @@ class DynamicAD_Viewer(QtGui.QWidget):
         self.updateSums()
         self.updateVerCut()
         self.updateHorCut()
+        if self.plotPosCheckBox.isChecked():
+            t = time.time() - self.startTime
+            self.posTimeData.append([t, self.sumPeakX, self.sumPeakY, self.cutPeakX, self.cutPeakY])
+            if len(self.posTimeData)>100:
+                self.posTimeData.pop(0)
+                self.posTimeSeriesReady.emit()
+            #QtCore.QTimer.singleShot(0,self.updatePosSeriesPlot)
+        if self.plotWidCheckBox.isChecked():
+            t = time.time() - self.startTime
+            self.widTimeData.append([t, self.sumWidthX, self.sumWidthY, self.cutWidthX, self.cutWidthY])
+            if len(self.widTimeData)>100:
+                self.widTimeData.pop(0)
+                self.widTimeSeriesReady.emit()
+            #QtCore.QTimer.singleShot(0,self.updateWidSeriesPlot)
+
+    def updatePosSeriesPlot(self):
+        posData=np.array(self.posTimeData)
+        x = posData[:,0] - posData[0, 0]
+        try:
+            self.peakSumXPlot.setData(x, posData[:, 1])
+            self.peakSumYPlot.setData(x, posData[:, 2])
+            self.peakCutXPlot.setData(x, posData[:, 3])
+            self.peakCutYPlot.setData(x, posData[:, 4])
+        except:
+            self.peakSumXPlot=self.timePosSeries.plot(x, posData[:, 1],name='sum X',
+                                                      pen=pg.mkPen('r'))
+            self.peakSumYPlot=self.timePosSeries.plot(x, posData[:, 2],
+                                                      name='sum Y',
+                                                      pen=pg.mkPen('g'))
+            self.peakCutXPlot=self.timePosSeries.plot(x, posData[:, 3],name='cut X',
+                                                      pen=pg.mkPen('b'))
+            self.peakCutYPlot=self.timePosSeries.plot(x, posData[:, 4], name='cut Y',
+                                                      pen=pg.mkPen('y'))
+            self.posSeriesLegend.addItem(self.peakSumXPlot,'sum X')
+            self.posSeriesLegend.addItem(self.peakSumYPlot,'sum Y')
+            self.posSeriesLegend.addItem(self.peakCutXPlot,'cut X')
+            self.posSeriesLegend.addItem(self.peakCutYPlot,'cut Y')
+        QtGui.QApplication.processEvents()
+
+
+    def updateWidSeriesPlot(self):
+        widData = np.array(self.widTimeData)
+        x = widData[:, 0] - widData[0, 0]
+        try:
+            self.widthSumXPlot.setData(x, widData[:, 1])
+            self.widthSumYPlot.setData(x, widData[:, 2])
+            self.widthCutXPlot.setData(x, widData[:, 3])
+            self.widthCutYPlot.setData(x, widData[:, 4])
+        except:
+            self.widthSumXPlot = self.timeWidSeries.plot(x, widData[:, 1], name='sum X',
+                                                        pen=pg.mkPen('r'))
+            self.widthSumYPlot = self.timeWidSeries.plot(x, widData[:, 2], name='sum X',
+                                                        pen=pg.mkPen('g'))
+            self.widthCutXPlot = self.timeWidSeries.plot(x, widData[:, 3], name='cut X',
+                                                        pen=pg.mkPen('b'))
+            self.widthCutYPlot = self.timeWidSeries.plot(x, widData[:, 4], name='cut Y',
+                                                        pen=pg.mkPen('y'))
+            self.widSeriesLegend.addItem(self.widthSumXPlot, 'sum X')
+            self.widSeriesLegend.addItem(self.widthSumYPlot, 'sum Y')
+            self.widSeriesLegend.addItem(self.widthCutXPlot, 'cut X')
+            self.widSeriesLegend.addItem(self.widthCutYPlot, 'cut Y')
+        QtGui.QApplication.processEvents()
 
 
 
@@ -311,8 +424,8 @@ class DynamicAD_Viewer(QtGui.QWidget):
             self.verSumPlot.setData(self.verSumData,self.yValues)
             self.horSumPlot.setData(self.xValues,self.horSumData)
         except:
-            self.verSumPlot=self.verSum.plot(self.verSumData,self.yValues)
-            self.horSumPlot=self.horSum.plot(self.xValues,self.horSumData)
+            self.verSumPlot=self.verSum.plot(self.verSumData,self.yValues, pen=pg.mkPen('g'))
+            self.horSumPlot=self.horSum.plot(self.xValues,self.horSumData, pen=pg.mkPen('r'))
         horSum = self.horSumData - np.min(self.horSumData)
         verSum = self.verSumData - np.min(self.verSumData)
         self.sumPeakX = np.sum(horSum * self.xValues) / np.sum(horSum)
