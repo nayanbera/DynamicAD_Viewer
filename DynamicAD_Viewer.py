@@ -3,9 +3,7 @@ import pyqtgraph as pg
 import numpy as np
 import sys
 import os
-import copy
 from scipy.misc import imread, imsave
-import shutil
 import epics
 from epics.utils import BYTES2STR
 import time
@@ -22,11 +20,15 @@ class AD_Reader(QtCore.QObject):
         :param parent:
         """
         QtCore.QObject.__init__(self, parent=parent)
+        self.connected = True
         self.detPV=detPV
         self.init_PVs()
         QtTest.QTest.qWait(1000)
         self.sizeX = self.sizeX_PV.value
         self.sizeY = self.sizeY_PV.value
+        if self.sizeX is None or self.sizeY is None:
+            self.connected=False
+
 
     def init_PVs(self):
         """
@@ -64,6 +66,7 @@ class DynamicAD_Viewer(QtGui.QWidget):
     imageUpdated = QtCore.pyqtSignal(np.ndarray)
     posTimeSeriesReady = QtCore.pyqtSignal()
     widTimeSeriesReady = QtCore.pyqtSignal()
+
     def __init__(self, parent = None):
         """
         :param parent:
@@ -76,22 +79,7 @@ class DynamicAD_Viewer(QtGui.QWidget):
         self.show()
         self.dataDir=os.getcwd()
         self.onPixelSizeChanged()
-        self.detPV=self.detPVLineEdit.text()
-        try:
-            self.adReader=AD_Reader(parent=self,detPV=self.detPV)
-            self.horROIWidthSpinBox.setMaximum(self.adReader.sizeX)
-            self.verROIWidthSpinBox.setMaximum(self.adReader.sizeY)
-            self.ROIWinX=self.horROIWidthSpinBox.value()
-            self.ROIWinY=self.verROIWidthSpinBox.value()
-            self.create_PlotLayout()
-            self.init_signals()
-            self.imageSizeXLineEdit.setText('%d'%self.adReader.sizeX)
-            self.imageSizeYLineEdit.setText('%d'%self.adReader.sizeY)
-        except:
-            QtGui.QMessageBox.warning(self,"Connection Error","Please check the Detector IOC is running. Quiting the "
-                                                               "software for now.",QtGui.QMessageBox.Ok)
-            self.close()
-
+        self.onDetPVChanged()
 
     def closeEvent(self,evt):
         epics.caput(BYTES2STR(self.detPV + "cam1:Acquire"), 0)
@@ -104,6 +92,9 @@ class DynamicAD_Viewer(QtGui.QWidget):
         self.pixelSizeLineEdit.setValidator(self.dblValidator)
 
     def init_signals(self):
+        self.detPVLineEdit.returnPressed.connect(self.onDetPVChanged)
+        self.openImageFilePushButton.clicked.connect(self.openImageFile)
+
         self.imageUpdated.connect(self.updatePlots)
         self.startUpdatePushButton.clicked.connect(self.onStartUpdate)
         self.stopUpdatePushButton.clicked.connect(self.onStopUpdate)
@@ -120,6 +111,31 @@ class DynamicAD_Viewer(QtGui.QWidget):
         self.posTimeSeriesReady.connect(self.updatePosSeriesPlot)
         self.widTimeSeriesReady.connect(self.updateWidSeriesPlot)
 
+
+    def onDetPVChanged(self):
+        self.detPV=self.detPVLineEdit.text()
+        self.adReader=AD_Reader(parent=self,detPV=self.detPV)
+        if self.adReader.connected:
+            self.horROIWidthSpinBox.setMaximum(self.adReader.sizeX)
+            self.verROIWidthSpinBox.setMaximum(self.adReader.sizeY)
+            self.ROIWinX=self.horROIWidthSpinBox.value()
+            self.ROIWinY=self.verROIWidthSpinBox.value()
+            self.create_PlotLayout()
+            self.init_signals()
+            self.imageSizeXLineEdit.setText('%d'%self.adReader.sizeX)
+            self.imageSizeYLineEdit.setText('%d'%self.adReader.sizeY)
+        else:
+            QtGui.QMessageBox.warning(self,"PV Error","Please check the PV is valid and the Detector IOC is running."
+                                                      ,QtGui.QMessageBox.Ok)
+            #self.close()
+
+    def openImageFile(self):
+        fname=QtGui.QFileDialog.getOpenFileName(self,'Select an image file',filter='Image File (*.tif *.tiff)',
+                                                directory=self.dataDir)[0]
+        if fname is not None and os.path.exists(fname):
+            self.create_PlotLayout(image=fname)
+
+
     def saveImage(self):
         try:
             data=self.imgData
@@ -128,7 +144,7 @@ class DynamicAD_Viewer(QtGui.QWidget):
                                                                                                      "*.tif "
                                                                                              "*.tiff)")
             self.dataDir=os.path.dirname(fname[0])
-            imsave(fname[0],data)
+            imsave(fname[0],data.T)
         except:
             QtGui.QMessageBox.warning(self,"Data Error","The 2D data doesnot exist. Please make sure the IOC is "
                                                         "running and at least one image is collected from the "
@@ -233,44 +249,62 @@ class DynamicAD_Viewer(QtGui.QWidget):
             QtCore.QTimer.singleShot(0,self.start_stop_Update)
         else:
             return
-        #QtGui.QApplication.processEvents()
 
 
-    def create_PlotLayout(self):
+    def create_PlotLayout(self,image=None):
         self.xValues=self.pixelSize*np.arange(self.adReader.sizeX)
         self.yValues=self.pixelSize*np.arange(self.adReader.sizeY)
         #self.vb = self.imageLayout.addViewBox(lockAspect=True)
-        self.imagePlot = self.imageLayout.addPlot(title='2D Image')
-        self.imagePlot.setLabel('left',text='Y',units='m')
-        self.imagePlot.setLabel('bottom',text='X',units='m')
-        self.imagePlot.setAspectLocked(lock=True,ratio=1)
+        self.imagePlot=self.imageLayout.getItem(0,0)
+        if self.imagePlot is None:
+            self.imagePlot = self.imageLayout.addPlot(title='2D Image')
+            self.imagePlot.setLabel('left',text='Y',units='m')
+            self.imagePlot.setLabel('bottom',text='X',units='m')
+            self.imagePlot.setAspectLocked(lock=True,ratio=1)
         self.imgPlot = pg.ImageItem()
         self.imgPlot.scale(self.pixelSize, self.pixelSize)
+        try:
+            self.imagePlot.removeItem(self.imgPlot)
+        except:
+            pass
         self.imagePlot.addItem(self.imgPlot)
-
         self.vb = self.imagePlot.getViewBox()
         self.vb.scene().sigMouseClicked.connect(self.onClick)
         self.vb.addItem(self.imgPlot)
         self.vb.setRange(QtCore.QRectF(0, 0, self.adReader.sizeX, self.adReader.sizeY))
-        try:
-            data = self.adReader.data_PV.get()
-            self.imgData = np.rot90(data.reshape(self.adReader.sizeY, self.adReader.sizeX), k=-1, axes=(0, 1))
-        except:
-            data=imread('2dimage_2.tif').T
+        if image is None:
+            try:
+                data = self.adReader.data_PV.get()
+                self.imgData = np.rot90(data.reshape(self.adReader.sizeY, self.adReader.sizeX), k=-1, axes=(0, 1))
+            except:
+                data=imread('2dimage_2.tif')
+        else:
+            data=imread(image)
             self.imgData = np.rot90(data.reshape(self.adReader.sizeY, self.adReader.sizeX), k=-1, axes=(0, 1))
         self.imgPlot.setImage(self.imgData)
-        self.verSum=self.verSumLayout.addPlot()#title='Vertical Sum')
-        self.verSum.setLabel('left',text='Y',units='m')
-        self.verSum.setLabel('bottom',text='Vertical Sum', units='Cnts')
-        self.horSum=self.horSumLayout.addPlot()#title='Horizontal Sum')
-        self.horSum.setLabel('bottom',text='X',units='m')
-        self.horSum.setLabel('left', text='Horizontal Sum', units='Cnts')
-        self.verCut=self.verCutLayout.addPlot()#title='Vertical Cut')
-        self.verCut.setLabel('left',text='Y',units='m')
-        self.verCut.setLabel('bottom', text='Vertical Cut', units='Cnts')
-        self.horCut=self.horCutLayout.addPlot()#title='Horizontal Cut')
-        self.horCut.setLabel('bottom', text='X', units='m')
-        self.horCut.setLabel('left', text='Horizontal Cut', units='Cnts')
+        self.verSum=self.verSumLayout.getItem(0,0)
+        if self.verSum is None:
+            self.verSum=self.verSumLayout.addPlot()#title='Vertical Sum')
+            self.verSum.setLabel('left',text='Y',units='m')
+            self.verSum.setLabel('bottom',text='Vertical Sum', units='Cnts')
+
+        self.horSum=self.horSumLayout.getItem(0,0)
+        if self.horSum is None:
+            self.horSum=self.horSumLayout.addPlot()#title='Horizontal Sum')
+            self.horSum.setLabel('bottom',text='X',units='m')
+            self.horSum.setLabel('left', text='Horizontal Sum', units='Cnts')
+
+        self.verCut=self.verCutLayout.getItem(0,0)
+        if self.verCut is None:
+            self.verCut=self.verCutLayout.addPlot()#title='Vertical Cut')
+            self.verCut.setLabel('left',text='Y',units='m')
+            self.verCut.setLabel('bottom', text='Vertical Cut', units='Cnts')
+
+        self.horCut=self.horCutLayout.getItem(0,0)
+        if self.horCut is None:
+            self.horCut=self.horCutLayout.addPlot()#title='Horizontal Cut')
+            self.horCut.setLabel('bottom', text='X', units='m')
+            self.horCut.setLabel('left', text='Horizontal Cut', units='Cnts')
         left=int(self.adReader.sizeX/2)
         top=int(self.adReader.sizeY/2)
         self.verLine=pg.LinearRegionItem(values=((left - self.ROIWinX/2) * self.pixelSize,
@@ -280,9 +314,14 @@ class DynamicAD_Viewer(QtGui.QWidget):
         self.horLine=pg.LinearRegionItem(values=((top - self.ROIWinX/2) * self.pixelSize,
                                                  (top + self.ROIWinY/2) * self.pixelSize),
                                                  orientation=pg.LinearRegionItem.Horizontal,bounds=(0,
-                                                                                                    self.adReader.sizeY*self.pixelSize))
-        self.vb.addItem(self.verLine)
-        self.vb.addItem(self.horLine)
+                                                                                                self.adReader.sizeY*self.pixelSize))
+        try:
+            self.imagePlot.removeItem(self.verLine)
+            self.imagePlot.removeItem(self.horLine)
+        except:
+            pass
+        self.imagePlot.addItem(self.verLine)
+        self.imagePlot.addItem(self.horLine)
         self.verLine.sigRegionChanged.connect(self.onVerLineChanged)
         self.horLine.sigRegionChanged.connect(self.onHorLineChanged)
         self.onVerLineChanged()
@@ -305,16 +344,18 @@ class DynamicAD_Viewer(QtGui.QWidget):
         self.horSum.setLimits(xMin=self.xValues[0],
                               xMax=self.xValues[
                                   -1])
-        self.timePosSeries=self.timeSeriesPosLayout.addPlot()
-        self.timePosSeries.setLabel('left','X, Y Pos', units='m')
-        self.timePosSeries.setLabel('bottom','time',units='sec')
-        self.posSeriesLegend=pg.LegendItem(offset=(-0.1,0.8))
-        self.posSeriesLegend.setParentItem(self.timePosSeries)
-        self.timeWidSeries=self.timeSeriesWidLayout.addPlot()
-        self.timeWidSeries.setLabel('left', 'X, Y Wid', units='m')
-        self.timeWidSeries.setLabel('bottom', 'time', units='sec')
-        self.widSeriesLegend = pg.LegendItem(offset=(-0.1,0.8))
-        self.widSeriesLegend.setParentItem(self.timeWidSeries)
+
+        self.timePosSeries=self.timeSeriesPosLayout.getItem(0,0)
+        if self.timePosSeries is None:
+            self.timePosSeries=self.timeSeriesPosLayout.addPlot(title='Peak Positions')
+            self.timePosSeries.setLabel('left','X, Y Pos', units='m')
+            self.timePosSeries.setLabel('bottom','time',units='sec')
+
+        self.timeWidSeries=self.timeSeriesWidLayout.getItem(0,0)
+        if self.timeWidSeries is None:
+            self.timeWidSeries=self.timeSeriesWidLayout.addPlot(title='Peak Widths')
+            self.timeWidSeries.setLabel('left', 'X, Y Wid', units='m')
+            self.timeWidSeries.setLabel('bottom', 'time', units='sec')
 
     def onClick(self,evt):
         pos=self.vb.mapSceneToView(evt.scenePos())
@@ -345,8 +386,6 @@ class DynamicAD_Viewer(QtGui.QWidget):
         self.cutPeakY = np.sum(verCut * self.yValues) / np.sum(verCut)
         cutY = np.argwhere(verCut >= np.max(verCut) / 2.0)
         self.cutWidthY = np.abs(self.yValues[cutY[0]] - self.yValues[cutY[-1]])
-        # self.cutWidthY = np.sqrt(
-        #     np.sum(verCut * (self.yValues - self.cutPeakY) ** 2) / 2 / np.sum(verCut))
         self.verCut.setTitle("Peak=%.4f, Wid=%.4f" % (1e3 * self.cutPeakY, 1e3 * self.cutWidthY))
 
     def updateHorCut(self):
@@ -359,8 +398,6 @@ class DynamicAD_Viewer(QtGui.QWidget):
         self.cutPeakX = np.sum(horCut * self.xValues) / np.sum(horCut)
         cutX = np.argwhere(horCut >= np.max(horCut) / 2.0)
         self.cutWidthX = np.abs(self.xValues[cutX[0]] - self.xValues[cutX[-1]])
-        # self.cutWidthX = np.sqrt(
-        #     np.sum(horCut * (self.xValues - self.cutPeakX) ** 2) / 2 / np.sum(horCut))
         self.horCut.setTitle("Peak=%.4f, Wid=%.4f" % (1e3 * self.cutPeakX, 1e3 * self.cutWidthX))
 
     def updatePlots(self):
@@ -373,14 +410,12 @@ class DynamicAD_Viewer(QtGui.QWidget):
             if len(self.posTimeData)>100:
                 self.posTimeData.pop(0)
                 self.posTimeSeriesReady.emit()
-            #QtCore.QTimer.singleShot(0,self.updatePosSeriesPlot)
         if self.plotWidCheckBox.isChecked():
             t = time.time() - self.startTime
             self.widTimeData.append([t, self.sumWidthX, self.sumWidthY, self.cutWidthX, self.cutWidthY])
             if len(self.widTimeData)>100:
                 self.widTimeData.pop(0)
                 self.widTimeSeriesReady.emit()
-            #QtCore.QTimer.singleShot(0,self.updateWidSeriesPlot)
         QtGui.QApplication.processEvents()
 
     def updatePosSeriesPlot(self):
@@ -401,11 +436,6 @@ class DynamicAD_Viewer(QtGui.QWidget):
                                                       pen=pg.mkPen('b'))
             self.peakCutYPlot=self.timePosSeries.plot(x, posData[:, 4], name='cut Y',
                                                       pen=pg.mkPen('y'))
-            self.posSeriesLegend.addItem(self.peakSumXPlot,'sum X')
-            self.posSeriesLegend.addItem(self.peakSumYPlot,'sum Y')
-            self.posSeriesLegend.addItem(self.peakCutXPlot,'cut X')
-            self.posSeriesLegend.addItem(self.peakCutYPlot,'cut Y')
-        QtGui.QApplication.processEvents()
 
 
     def updateWidSeriesPlot(self):
@@ -425,10 +455,7 @@ class DynamicAD_Viewer(QtGui.QWidget):
                                                         pen=pg.mkPen('b'))
             self.widthCutYPlot = self.timeWidSeries.plot(x, widData[:, 4], name='cut Y',
                                                         pen=pg.mkPen('y'))
-            self.widSeriesLegend.addItem(self.widthSumXPlot, 'sum X')
-            self.widSeriesLegend.addItem(self.widthSumYPlot, 'sum Y')
-            self.widSeriesLegend.addItem(self.widthCutXPlot, 'cut X')
-            self.widSeriesLegend.addItem(self.widthCutYPlot, 'cut Y')
+
 
 
 
@@ -447,16 +474,6 @@ class DynamicAD_Viewer(QtGui.QWidget):
         verSum = self.verSumData - np.min(self.verSumData)
         self.sumPeakX = np.sum(horSum * self.xValues) / np.sum(horSum)
         self.sumPeakY = np.sum(verSum * self.yValues) / np.sum(verSum)
-        # horSum = np.exp(-(self.xValues - self.sumPeakX)**2 / 0.002**2)
-        # verSum = np.exp(-(self.yValues - self.sumPeakY) ** 2 / 0.002**2)
-        # try:
-        #     self.verSumPlot.setData(verSum, self.yValues)
-        #     self.horSumPlot.setData(self.xValues, horSum)
-        # except:
-        #     self.verSumPlot=self.verSum.plot(verSum,self.yValues, pen=pg.mkPen('g'))
-        #     self.horSumPlot=self.horSum.plot(self.xValues,horSum, pen=pg.mkPen('r'))
-        #self.sumWidthX = np.sqrt(np.sum(horSum * (self.xValues - self.sumPeakX) ** 2) / 2 / np.sum(horSum))
-        #self.sumWidthY = np.sqrt(np.sum(verSum * (self.yValues - self.sumPeakY) ** 2) / 2 / np.sum(verSum))
         peakX=np.argwhere(horSum>=np.max(horSum)/2.0)
         peakY=np.argwhere(verSum>=np.max(verSum)/2.0)
         self.sumWidthX=np.abs(self.xValues[peakX[0]]-self.xValues[peakX[-1]])
