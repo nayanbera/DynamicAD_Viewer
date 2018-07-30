@@ -79,6 +79,11 @@ class DynamicAD_Viewer(QtGui.QWidget):
         self.show()
         self.dataDir=os.getcwd()
         self.onPixelSizeChanged()
+        detPV, okPressed = QtGui.QInputDialog.getText(self, "Get Detector PV", "Detector PV", QtGui.QLineEdit.Normal,
+                                               "15IDPS3:")
+        if not okPressed:
+            detPV="15IDPS3:"
+        self.detPVLineEdit.setText(detPV)
         self.onDetPVChanged()
 
 
@@ -299,16 +304,18 @@ class DynamicAD_Viewer(QtGui.QWidget):
 #            self.verCut.setLabel('left',text='Y',units='m')
             self.verCut.setLabel('bottom', text='Vertical Cut', units='Cnts')
             self.verCut.hideAxis('left')
-            #self.verCut.showAxis('right')
+#            self.verCut.showAxis('right')
             self.verCut.invertX()
+            self.verCut.setYLink(self.vb)
             #self.verCut.autoRange()
 
         self.horCut=self.horCutLayout.getItem(0,0)
         if self.horCut is None:
             self.horCut=self.horCutLayout.addPlot()#title='Horizontal Cut')
-#            self.horCut.setLabel('bottom', text='X', units='m')
+            self.horCut.setLabel('bottom', text='X', units='m')
             self.horCut.hideAxis('bottom')
             self.horCut.setLabel('left', text='Horizontal Cut', units='Cnts')
+            self.horCut.setXLink(self.vb)
         left=int(self.adReader.sizeX/2)
         top=int(self.adReader.sizeY/2)
         self.verLine=pg.LinearRegionItem(values=((left - self.ROIWinX/2) * self.pixelSize,
@@ -437,6 +444,7 @@ class DynamicAD_Viewer(QtGui.QWidget):
             self.peakCutYPlot.setData(x, posData[:, 2])
         else:
             self.peakCutPlot=pg.plot(title = 'Peak-Poistion Plot')
+            self.peakCutPlot.parent().closeEvent=self.peakCutPlotCloseEvent
             self.peakCutPlot.setLabel('left','X, Y Positions', units='m')
             self.peakCutPlot.setLabel('bottom','time',units='seconds')
             self.peakCutXPlot=pg.PlotCurveItem(x, posData[:, 1],name='cut X',
@@ -446,6 +454,9 @@ class DynamicAD_Viewer(QtGui.QWidget):
             self.peakCutPlot.addItem(self.peakCutXPlot)
             self.peakCutPlot.addItem(self.peakCutYPlot)
             self.cutSeriesExists=True
+
+    def peakCutPlotCloseEvent(self,evt):
+        self.cutSeriesExists=False
 
 
     def updateWidSeriesPlot(self):
@@ -457,6 +468,7 @@ class DynamicAD_Viewer(QtGui.QWidget):
             # self.widthCutYPlot.setData(x, widData[:, 4])
         else:
             self.widthCutPlot = pg.plot(title='Peak-Width Plot')
+            self.widthCutPlot.parent().closeEvent=self.widthCutPlotCloseEvent
             self.widthCutPlot.setLabel('left','X, Y Widths',units='m')
             self.widthCutPlot.setLabel('bottom','time',units='seconds')
             self.widthCutXPlot=pg.PlotCurveItem(x, widData[:, 1], name='wid X', pen=pg.mkPen('b'),)
@@ -465,10 +477,8 @@ class DynamicAD_Viewer(QtGui.QWidget):
             self.widthCutPlot.addItem(self.widthCutYPlot)
             self.widSeriesExists=True
 
-
-            # self.widthCutPlot.getPlotItem().plot(x, widData[:, 4], name='cut Y',
-            #                                             pen=pg.mkPen('y'))
-
+    def widthCutPlotCloseEvent(self,evt):
+        self.widSeriesExists = False
 
 
 
