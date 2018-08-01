@@ -7,6 +7,7 @@ from scipy.misc import imread, imsave
 import epics
 from epics.utils import BYTES2STR
 import time
+import copy
 
 
 class AD_Reader(QtCore.QObject):
@@ -78,7 +79,9 @@ class DynamicAD_Viewer(QtGui.QWidget):
         self.stopUpdatePushButton.setEnabled(False)
         self.show()
         self.dataDir=os.getcwd()
+        self.startUpdate=False
         self.onPixelSizeChanged()
+
         detPV, okPressed = QtGui.QInputDialog.getText(self, "Get Detector PV", "Detector PV", QtGui.QLineEdit.Normal,
                                                "15IDPS3:")
         if not okPressed:
@@ -196,8 +199,15 @@ class DynamicAD_Viewer(QtGui.QWidget):
                                                           "camera.", QtGui.QMessageBox.Ok)
 
     def onPixelSizeChanged(self):
-        self.pixelSize=float(self.pixelSizeLineEdit.text())*1e-6
-
+        if self.startUpdate:
+            QtGui.QMessageBox.warning(self,"Please Stop the updating of the image first")
+            return
+        else:
+            self.pixelSize=float(self.pixelSizeLineEdit.text())*1e-6
+            try:
+                self.create_PlotLayout(image=None)
+            except:
+                pass
 
     def onSizeXChanged(self,value):
         self.imageSizeXLineEdit.setText('%d'%value)
@@ -208,14 +218,14 @@ class DynamicAD_Viewer(QtGui.QWidget):
     def onROIWinXChanged(self):
         self.ROIWinX=self.horROIWidthSpinBox.value()
         left,right=self.verLine.getRegion()
-        x=(right + left) / 2
-        self.verLine.setRegion((x - self.ROIWinX * self.pixelSize / 2,x + self.ROIWinX * self.pixelSize/ 2))
+        x=(right + left)*self.pixelSize/self.oldPixelSize / 2
+        self.verLine.setRegion((x - self.ROIWinX * self.pixelSize / 2,x + self.ROIWinX * self.pixelSize / 2))
 
 
     def onROIWinYChanged(self):
         self.ROIWinY=self.verROIWidthSpinBox.value()
         up,down=self.horLine.getRegion()
-        y = (up + down) / 2
+        y = (up + down)*self.pixelSize/self.oldPixelSize / 2
         self.horLine.setRegion((y - self.ROIWinY * self.pixelSize / 2, y + self.ROIWinY * self.pixelSize / 2))
 
     def onStartUpdate(self):
@@ -275,13 +285,15 @@ class DynamicAD_Viewer(QtGui.QWidget):
             self.imagePlot = self.imageLayout.addPlot(title='2D Image')
             self.imagePlot.setLabel('left',text='Y',units='m')
             self.imagePlot.setLabel('bottom',text='X',units='m')
-            self.imagePlot.setAspectLocked(lock=True,ratio=1)
-        self.imgPlot = pg.ImageItem()
-        self.imgPlot.scale(self.pixelSize, self.pixelSize)
+            self.imagePlot.setAspectLocked(lock=False,ratio=1)
+
         try:
             self.imagePlot.removeItem(self.imgPlot)
         except:
             pass
+        self.imgPlot = pg.ImageItem()
+        self.imgPlot.scale(self.pixelSize, self.pixelSize)
+        self.oldPixelSize=copy.copy(self.pixelSize)
         self.imagePlot.addItem(self.imgPlot)
         self.vb = self.imagePlot.getViewBox()
         self.vb.scene().sigMouseClicked.connect(self.onClick)
