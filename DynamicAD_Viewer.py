@@ -31,6 +31,7 @@ class AD_Reader(QtCore.QObject):
             self.connected=False
 
 
+
     def init_PVs(self):
         """
         Initialize all the PVs
@@ -88,6 +89,8 @@ class DynamicAD_Viewer(QtGui.QWidget):
             detPV="15IDPS3:"
         self.detPVLineEdit.setText(detPV)
         self.onDetPVChanged()
+        self.colorMode = self.colorModeComboBox.currentText()
+        self.colorModeChanged()
 
 
     def closeEvent(self,evt):
@@ -114,6 +117,8 @@ class DynamicAD_Viewer(QtGui.QWidget):
         self.adReader.imageSizeYChanged.connect(self.onSizeYChanged)
         self.pixelSizeLineEdit.returnPressed.connect(self.onPixelSizeChanged)
 
+        self.colorModeComboBox.currentIndexChanged.connect(self.colorModeChanged)
+
         self.saveImagePushButton.clicked.connect(self.saveImage)
         self.saveHorProfilesPushButton.clicked.connect(self.saveHorProfile)
         self.saveVerProfilesPushButton.clicked.connect(self.saveVerProfile)
@@ -121,10 +126,29 @@ class DynamicAD_Viewer(QtGui.QWidget):
         self.posTimeSeriesReady.connect(self.updatePosSeriesPlot)
         self.widTimeSeriesReady.connect(self.updateWidSeriesPlot)
 
+    def colorModeChanged(self):
+        if self.startUpdate:
+            QtGui.QMessageBox.warning(self,"Warning","Please Stop the updating of the image first",QtGui.QMessageBox.Ok)
+            self.colorModeComboBox.setCurrentText(self.colorMode)
+            return
+        else:
+            self.colorMode=self.colorModeComboBox.currentText()
+            if self.colorMode=='Greyscale':
+                epics.caput(self.detPV+'cam1:ColorMode', 0)
+                epics.caput(self.detPV+'cam1:BayerConvert', 0)
+            else:
+                epics.caput(self.detPV+'cam1:ColorMode', 2)
+                epics.caput(self.detPV + 'cam1:BayerConvert', 1)
+            epics.caput(BYTES2STR(self.detPV + "cam1:ArrayCounter"), 0)
+            epics.caput(BYTES2STR(self.detPV + "cam1:Acquire"), 1)
+            time.sleep(0.2)
+            epics.caput(BYTES2STR(self.detPV + "cam1:Acquire"), 0)
+            epics.caput(BYTES2STR(self.detPV + "cam1:ArrayCounter"), 0)
 
     def onDetPVChanged(self):
         self.detPV=self.detPVLineEdit.text()
         self.adReader=AD_Reader(parent=self,detPV=self.detPV)
+        print self.adReader.connected
         if self.adReader.connected:
             self.horROIWidthSpinBox.setMaximum(self.adReader.sizeX)
             self.verROIWidthSpinBox.setMaximum(self.adReader.sizeY)
@@ -200,7 +224,7 @@ class DynamicAD_Viewer(QtGui.QWidget):
 
     def onPixelSizeChanged(self):
         if self.startUpdate:
-            QtGui.QMessageBox.warning(self,"Please Stop the updating of the image first")
+            QtGui.QMessageBox.warning(self,"Warning","Please Stop the updating of the image first",QtGui.QMessageBox.Ok)
             return
         else:
             self.pixelSize=float(self.pixelSizeLineEdit.text())*1e-6
@@ -268,7 +292,13 @@ class DynamicAD_Viewer(QtGui.QWidget):
     def start_stop_Update(self):
         if self.startUpdate:
             data=self.adReader.data_PV.get()
-            self.imgData=np.rot90(data.reshape(self.adReader.sizeY,self.adReader.sizeX),k=-1,axes=(0,1))
+            if self.colorMode == 'Greyscale':
+                self.imgData = np.rot90(data.reshape(self.adReader.sizeY, self.adReader.sizeX), k=-1,
+                                        axes=(0, 1))
+                self.greyData = self.imgData
+            else:
+                self.imgData = np.rot90(data.reshape(self.adReader.sizeY, self.adReader.sizeX, 3), k=-1, axes=(0, 1))
+                self.greyData = np.dot(self.imgData[..., :3], [0.299, 0.587, 0.114])
             self.imgPlot.setImage(self.imgData)
             self.imageUpdated.emit(self.imgData)
             QtCore.QTimer.singleShot(0,self.start_stop_Update)
@@ -302,10 +332,17 @@ class DynamicAD_Viewer(QtGui.QWidget):
         if image is None:
             try:
                 data = self.adReader.data_PV.get()
-                self.imgData = np.rot90(data.reshape(self.adReader.sizeY, self.adReader.sizeX), k=-1, axes=(0, 1))
+                if self.colorMode=='Greyscale':
+                    self.imgData = np.rot90(data.reshape(self.adReader.sizeY, self.adReader.sizeX), k=-1,
+                                            axes=(0, 1))
+                    self.greyData=self.imgData
+                else:
+                    self.imgData = np.rot90(data.reshape(self.adReader.sizeY, self.adReader.sizeX,3), k=-1, axes=(0, 1))
+                    self.greyData = np.dot(self.imgData[..., :3], [0.299, 0.587, 0.114])
             except:
                 data=imread('2dimage_2.tif')
                 self.imgData = np.rot90(data.reshape(self.adReader.sizeY, self.adReader.sizeX), k=-1, axes=(0, 1))
+                self.greyData = self.imgData
         else:
             data=imread(image)
             self.imgData = np.rot90(data.reshape(self.adReader.sizeY, self.adReader.sizeX), k=-1, axes=(0, 1))
@@ -406,7 +443,7 @@ class DynamicAD_Viewer(QtGui.QWidget):
         self.updateHorCut()
 
     def updateVerCut(self):
-        self.verCutData=np.sum(self.imgData[int(self.left):int(self.right),:],axis=0)
+        self.verCutData=np.sum(self.greyData[self.left:self.right,:],axis=0)
         try:
             self.verCutPlot.setData(self.verCutData,self.yValues)
         except:
@@ -419,7 +456,7 @@ class DynamicAD_Viewer(QtGui.QWidget):
         #self.verCut.setXRange(0,np.max(verCut))
 
     def updateHorCut(self):
-        self.horCutData=np.sum(self.imgData[:,int(self.up):int(self.down)],axis=1)
+        self.horCutData=np.sum(self.greyData[:,self.up:self.down],axis=1)
         try:
             self.horCutPlot.setData(self.xValues,self.horCutData)
         except:
