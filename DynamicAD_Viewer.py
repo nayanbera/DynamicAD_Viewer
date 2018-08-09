@@ -148,7 +148,6 @@ class DynamicAD_Viewer(QtGui.QWidget):
     def onDetPVChanged(self):
         self.detPV=self.detPVLineEdit.text()
         self.adReader=AD_Reader(parent=self,detPV=self.detPV)
-        print self.adReader.connected
         if self.adReader.connected:
             self.horROIWidthSpinBox.setMaximum(self.adReader.sizeX)
             self.verROIWidthSpinBox.setMaximum(self.adReader.sizeY)
