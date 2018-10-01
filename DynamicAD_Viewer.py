@@ -65,6 +65,7 @@ class AD_Reader(QtCore.QObject):
 
 
 class DynamicAD_Viewer(QtGui.QWidget):
+    arrayDataUpdated=QtCore.pyqtSignal()
     imageUpdated = QtCore.pyqtSignal(np.ndarray)
     posTimeSeriesReady = QtCore.pyqtSignal()
     widTimeSeriesReady = QtCore.pyqtSignal()
@@ -256,20 +257,24 @@ class DynamicAD_Viewer(QtGui.QWidget):
         self.widSeriesExists=False
         epics.caput(BYTES2STR(self.detPV + "cam1:ArrayCounter"), 0)
         epics.caput(BYTES2STR(self.detPV + "cam1:Acquire"), 1)
-        QtTest.QTest.qWait(100)
+        epics.camonitor(BYTES2STR(self.detPV + "image1:ArrayCounter_RBV"),callback=self.onArrayDataUpdate)
+        self.arrayDataUpdated.connect(self.start_stop_Update)
         self.startUpdate=True
         self.startTime = time.time()
         self.posTimeData = []
         self.widTimeData = []
-        self.start_stop_Update()
         self.startUpdatePushButton.setEnabled(False)
         self.stopUpdatePushButton.setEnabled(True)
         self.setOutputOptions(enabled=False)
         self.detPVLineEdit.setEnabled(False)
 
+    def onArrayDataUpdate(self,**kwargs):
+        self.arrayDataUpdated.emit()
+
 
     def onStopUpdate(self):
         self.startUpdate=False
+        self.arrayDataUpdated.disconnect(self.start_stop_Update)
         self.startUpdatePushButton.setEnabled(True)
         self.stopUpdatePushButton.setEnabled(False)
         self.setOutputOptions(enabled=True)
@@ -289,20 +294,16 @@ class DynamicAD_Viewer(QtGui.QWidget):
         self.saveVerProfilesPushButton.setEnabled(enabled)
 
     def start_stop_Update(self):
-        if self.startUpdate:
-            data=self.adReader.data_PV.get()
-            if self.colorMode == 'Greyscale':
-                self.imgData = np.rot90(data.reshape(self.adReader.sizeY, self.adReader.sizeX), k=-1,
-                                        axes=(0, 1))
-                self.greyData = self.imgData
-            else:
-                self.imgData = np.rot90(data.reshape(self.adReader.sizeY, self.adReader.sizeX, 3), k=-1, axes=(0, 1))
-                self.greyData = np.dot(self.imgData[..., :3], [0.299, 0.587, 0.114])
-            self.imgPlot.setImage(self.imgData)
-            self.imageUpdated.emit(self.imgData)
-            QtCore.QTimer.singleShot(0,self.start_stop_Update)
+        data=self.adReader.data_PV.get()
+        if self.colorMode == 'Greyscale':
+            self.imgData = np.rot90(data.reshape(self.adReader.sizeY, self.adReader.sizeX), k=-1,
+                                    axes=(0, 1))
+            self.greyData = self.imgData
         else:
-            return
+            self.imgData = np.rot90(data.reshape(self.adReader.sizeY, self.adReader.sizeX, 3), k=-1, axes=(0, 1))
+            self.greyData = self.imgData[..., :3]@np.array([0.299, 0.587, 0.114])
+        self.imgPlot.setImage(self.imgData)
+        self.imageUpdated.emit(self.imgData)
 
 
     def create_PlotLayout(self,image=None):
