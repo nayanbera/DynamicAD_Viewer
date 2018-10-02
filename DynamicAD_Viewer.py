@@ -81,6 +81,11 @@ class DynamicAD_Viewer(QtGui.QWidget):
         self.stopUpdatePushButton.setEnabled(False)
         self.show()
         self.dataDir=os.getcwd()
+        self.expTime=0.1
+        self.period=1.0
+        self.floatValidator=QtGui.QDoubleValidator()
+        self.expTimeLineEdit.setValidator(self.floatValidator)
+        self.acquirePeriodLineEdit.setValidator(self.floatValidator)
         self.startUpdate=False
         self.onPixelSizeChanged()
 
@@ -92,6 +97,8 @@ class DynamicAD_Viewer(QtGui.QWidget):
         self.onDetPVChanged()
         self.colorMode = self.colorModeComboBox.currentText()
         self.colorModeChanged()
+        self.exposureTimeChanged()
+        self.acquirePeriodChanged()
 
 
     def closeEvent(self,evt):
@@ -107,6 +114,8 @@ class DynamicAD_Viewer(QtGui.QWidget):
 
     def init_signals(self):
         self.detPVLineEdit.returnPressed.connect(self.onDetPVChanged)
+        self.expTimeLineEdit.returnPressed.connect(self.exposureTimeChanged)
+        self.acquirePeriodLineEdit.returnPressed.connect(self.acquirePeriodChanged)
         self.openImageFilePushButton.clicked.connect(self.openImageFile)
 
         self.imageUpdated.connect(self.updatePlots)
@@ -126,6 +135,24 @@ class DynamicAD_Viewer(QtGui.QWidget):
 
         self.posTimeSeriesReady.connect(self.updatePosSeriesPlot)
         self.widTimeSeriesReady.connect(self.updateWidSeriesPlot)
+
+    def exposureTimeChanged(self):
+        if self.startUpdate:
+            QtGui.QMessageBox.warning(self,"Warning","Please Stop the updating of the image first",QtGui.QMessageBox.Ok)
+            self.expTimeLineEdit.setText(str(self.expTime))
+            return
+        else:
+            self.expTime=float(self.expTimeLineEdit.text())
+            epics.caput(self.detPV + 'cam1:AcquireTime', self.expTime)
+
+    def acquirePeriodChanged(self):
+        if self.startUpdate:
+            QtGui.QMessageBox.warning(self,"Warning","Please Stop the updating of the image first",QtGui.QMessageBox.Ok)
+            self.acquirePeriodLineEdit.setText(str(self.period))
+            return
+        else:
+            self.period=float(self.acquirePeriodLineEdit.text())
+            epics.caput(self.detPV+'cam1:AcquirePeriod',self.period)
 
     def colorModeChanged(self):
         if self.startUpdate:
