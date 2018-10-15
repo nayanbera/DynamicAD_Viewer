@@ -223,8 +223,11 @@ class DynamicAD_Viewer(QtGui.QWidget):
     def create_PlotLayout(self):
         self.xValues=self.pixelSize*np.arange(self.adReader.sizeX)
         self.yValues=self.pixelSize*np.arange(self.adReader.sizeY)
-        self.vb = self.imageLayout.addViewBox(lockAspect=True)
+        #self.vb = self.imageLayout.addViewBox(lockAspect=True)
+        self.imagePlot=self.imageLayout.addPlot(self.imagePlot)
         self.imgPlot = pg.ImageItem(border='w')
+        self.imagePlot.addItem(self.imgPlot)
+        self.vb=self.imagePlot.getViewBox()
         self.vb.scene().sigMouseClicked.connect(self.onClick)
         self.vb.addItem(self.imgPlot)
         self.vb.setRange(QtCore.QRectF(0, 0, self.adReader.sizeX, self.adReader.sizeY))
