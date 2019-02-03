@@ -212,7 +212,7 @@ class DynamicAD_Viewer(QtGui.QWidget):
         if self.startUpdate:
             data=self.adReader.data_PV.get()
             self.imgData=np.rot90(data.reshape(self.adReader.sizeY,self.adReader.sizeX),k=-1,axes=(0,1))
-            self.imgPlot.setImage(self.imgData)
+            self.imgPlot.setImage(self.imgData,autoLevels=False)
             self.imageUpdated.emit(self.imgData)
             QtCore.QTimer.singleShot(0,self.start_stop_Update)
         else:
@@ -223,17 +223,14 @@ class DynamicAD_Viewer(QtGui.QWidget):
     def create_PlotLayout(self):
         self.xValues=self.pixelSize*np.arange(self.adReader.sizeX)
         self.yValues=self.pixelSize*np.arange(self.adReader.sizeY)
-        #self.vb = self.imageLayout.addViewBox(lockAspect=True)
-        self.imagePlot=self.imageLayout.addPlot(self.imagePlot)
+        self.vb = self.imageLayout.addViewBox(lockAspect=True)
         self.imgPlot = pg.ImageItem(border='w')
-        self.imagePlot.addItem(self.imgPlot)
-        self.vb=self.imagePlot.getViewBox()
         self.vb.scene().sigMouseClicked.connect(self.onClick)
         self.vb.addItem(self.imgPlot)
         self.vb.setRange(QtCore.QRectF(0, 0, self.adReader.sizeX, self.adReader.sizeY))
         data = self.adReader.data_PV.get()
         self.imgData = np.rot90(data.reshape(self.adReader.sizeY, self.adReader.sizeX), k=-1, axes=(0, 1))
-        self.imgPlot.setImage(self.imgData)
+        self.imgPlot.setImage(self.imgData,autoLevels=False)
         self.verSum=self.verSumLayout.addPlot()#title='Vertical Sum')
         self.verSum.setLabel('left',text='Y',units='m')
         self.verSum.setLabel('bottom',text='Vertical Sum')
