@@ -527,7 +527,7 @@
      <item>
       <widget class="QSpinBox" name="horROIWidthSpinBox">
        <property name="minimum">
-        <number>2</number>
+        <number>1</number>
        </property>
        <property name="singleStep">
         <number>2</number>
@@ -601,6 +601,13 @@
       <widget class="QCheckBox" name="plotWidCheckBox">
        <property name="text">
         <string>Plot Wid</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QCheckBox" name="autoSaveCheckBox">
+       <property name="text">
+        <string>Autosave</string>
        </property>
       </widget>
      </item>

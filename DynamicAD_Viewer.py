@@ -475,8 +475,11 @@ class DynamicAD_Viewer(QtGui.QWidget):
             self.verCutPlot.setData(self.verCutData,self.yValues)
         except:
             self.verCutPlot=self.verCut.plot(self.verCutData,self.yValues, pen=pg.mkPen('y'))
-        verCut = self.verCutData - np.min(self.verCutData)
-        self.cutPeakY = np.sum(verCut * self.yValues) / np.sum(verCut)
+        minm=np.min(self.verCutData)
+        maxm=np.max(self.verCutData)
+        pos=np.where(self.verCutData>(maxm+minm)/2)
+        verCut = self.verCutData[pos]
+        self.cutPeakY = np.sum(verCut * self.yValues[pos]) / np.sum(verCut)
         cutY = np.argwhere(verCut >= np.max(verCut) / 2.0)
         self.cutWidthY = np.abs(self.yValues[cutY[0]] - self.yValues[cutY[-1]])
         self.verCut.setTitle("Peak=%.4f, Wid=%.4f" % (1e3 * self.cutPeakY, 1e3 * self.cutWidthY))
@@ -488,16 +491,60 @@ class DynamicAD_Viewer(QtGui.QWidget):
             self.horCutPlot.setData(self.xValues,self.horCutData)
         except:
             self.horCutPlot=self.horCut.plot(self.xValues,self.horCutData, pen=pg.mkPen('b'))
-        horCut = self.horCutData - np.min(self.horCutData)
-        self.cutPeakX = np.sum(horCut * self.xValues) / np.sum(horCut)
+        minm=np.min(self.horCutData)
+        maxm=np.max(self.horCutData)
+        pos=np.where(self.horCutData>(maxm+minm)/2)
+        horCut = self.horCutData[pos]
+        self.cutPeakX = np.sum(horCut * self.xValues[pos]) / np.sum(horCut)
         cutX = np.argwhere(horCut >= np.max(horCut) / 2.0)
         self.cutWidthX = np.abs(self.xValues[cutX[0]] - self.xValues[cutX[-1]])
         self.horCut.setTitle("Peak=%.4f, Wid=%.4f" % (1e3 * self.cutPeakX, 1e3 * self.cutWidthX))
+
+    def getSaveTimeSeriesFile(self):
+        self.saveFile = QtGui.QFileDialog.getSaveFileName(self, "Please provide the file for saving the time-"
+                                                                "series for the horizontal peak profiles ")[0]
+        self.fh = open(self.saveFile, 'w')
+        self.saveStartTime = time.time()
+        #self.fh.write('#File created on ' + self.time.asctime() + '\n')
+        self.fh.write('#time m1 m2 m3 m4 m5 m6 monB horPeakPos(mm) horPeakWid(mm) verPeakPos(mm) verPeakWid(mm) '
+                      '\n')
+
+    def getMonoValues(self):
+        self.m1=epics.caget(BYTES2STR("15IDA:m1.REP"))
+        self.m2=epics.caget(BYTES2STR("15IDA:m2.REP"))
+        self.m3=epics.caget(BYTES2STR("15IDA:m3.REP"))
+        self.m4=epics.caget(BYTES2STR("15IDA:m4.REP"))
+        self.m5=epics.caget(BYTES2STR("15IDA:m5.REP"))
+        self.m6=epics.caget(BYTES2STR("15IDA:m6.REP"))
+        self.monB=epics.caget(BYTES2STR("15IDB:scaler1.S2"))
 
     def updatePlots(self):
 #        self.updateSums()
         self.updateVerCut()
         self.updateHorCut()
+        if self.autoSaveCheckBox.isChecked():
+            if self.saveFile is not None:
+                t=time.time()
+                self.getMonoValues()
+                self.fh.write('%.6f %.d %d %d %d %d %d %d %.6f %.6f %.6f %.6f\n'%(t-self.saveStartTime,
+                                                                                             self.m1,self.m2,self.m3,
+                                                                                             self.m4,self.m5,self.m6,
+                                                                                             self.monB,
+                                                                                             1e3*self.cutPeakX,
+                                                                                             1e3*self.cutWidthX,
+                                                                                             1e3*self.cutPeakY,
+                                                                                             1e3*self.cutWidthY))
+            else:
+                self.imageUpdated.disconnect(self.updatePlots)
+                self.getSaveTimeSeriesFile()
+                self.imageUpdated.connect(self.updatePlots)
+        else:
+            try:
+                self.saveFile=None
+                self.fh.close()
+            except:
+                pass
+
         if self.plotPosCheckBox.isChecked():
             t = time.time() - self.startTime
             self.posTimeData.append([t, self.cutPeakX, self.cutPeakY])
@@ -511,6 +558,9 @@ class DynamicAD_Viewer(QtGui.QWidget):
                 self.widTimeData.pop(0)
                 self.widTimeSeriesReady.emit()
         QtGui.QApplication.processEvents()
+
+
+
 
     def updatePosSeriesPlot(self):
         posData=np.array(self.posTimeData)
