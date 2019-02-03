@@ -329,7 +329,7 @@ class DynamicAD_Viewer(QtGui.QWidget):
         else:
             self.imgData = np.rot90(data.reshape(self.adReader.sizeY, self.adReader.sizeX, 3), k=-1, axes=(0, 1))
             self.greyData = self.imgData[..., :3]@np.array([0.299, 0.587, 0.114])
-        self.imgPlot.setImage(self.imgData)
+        self.imgPlot.setImage(self.imgData,autoLevels=False)
         self.imageUpdated.emit(self.imgData)
 
 
@@ -373,7 +373,7 @@ class DynamicAD_Viewer(QtGui.QWidget):
         else:
             data=imread(image)
             self.imgData = np.rot90(data.reshape(self.adReader.sizeY, self.adReader.sizeX), k=-1, axes=(0, 1))
-        self.imgPlot.setImage(self.imgData)
+        self.imgPlot.setImage(self.imgData,autoLevels=True)
         self.verCut=self.verCutLayout.getItem(0,0)
         if self.verCut is None:
             self.verCut=self.verCutLayout.addPlot()#title='Vertical Cut')
@@ -503,11 +503,22 @@ class DynamicAD_Viewer(QtGui.QWidget):
     def getSaveTimeSeriesFile(self):
         self.saveFile = QtGui.QFileDialog.getSaveFileName(self, "Please provide the file for saving the time-"
                                                                 "series for the horizontal peak profiles ")[0]
-        self.fh = open(self.saveFile, 'w')
-        self.saveStartTime = time.time()
-        #self.fh.write('#File created on ' + self.time.asctime() + '\n')
-        self.fh.write('#time m1 m2 m3 m4 m5 m6 monB horPeakPos(mm) horPeakWid(mm) verPeakPos(mm) verPeakWid(mm) '
-                      '\n')
+        if self.saveFile!='':
+            self.fh = open(self.saveFile, 'w')
+            self.saveStartTime = time.time()
+            self.fh.write('#File saved on %s'%time.asctime())
+            self.fh.write('#Exposure_time=%.4f\n'%self.expTime)
+            self.fh.write('#col_names=[\'time\',\'m1\',\'m2\',\'m3\',\'m4\',\'m5\',\'m6\',\'monB\',\'horPeakPos(mm)\','
+                          '\'horPeakWid(mm)\','
+                          '\'verPeakPos('
+                          'mm)\','
+                          '\'verPeakWid(mm)\']\n')
+            #self.fh.write('#File created on ' + self.time.asctime() + '\n')
+            self.fh.write('#time m1 m2 m3 m4 m5 m6 monB horPeakPos(mm) horPeakWid(mm) verPeakPos(mm) verPeakWid(mm) '
+                          '\n')
+        else:
+            self.saveFile=None
+            self.autoSaveCheckBox.setCheckState(0)
 
     def getMonoValues(self):
         self.m1=epics.caget(BYTES2STR("15IDA:m1.REP"))
