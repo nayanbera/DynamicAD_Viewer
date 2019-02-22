@@ -1,10 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="ChangeListManager">
-    <list default="true" id="b6b73cd5-7744-4e19-a4a0-d9c696f5288a" name="Default" comment="">
-      <change afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+    <list default="true" id="b6b73cd5-7744-4e19-a4a0-d9c696f5288a" name="Default" comment="Fixed some bugs related to random crashes">
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/DynamicAD_Viewer.py" beforeDir="false" afterPath="$PROJECT_DIR$/DynamicAD_Viewer.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/UI_Forms/DynamicAD_Viewer.ui" beforeDir="false" afterPath="$PROJECT_DIR$/UI_Forms/DynamicAD_Viewer.ui" afterDir="false" />
     </list>
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
     <option name="SHOW_DIALOG" value="false" />
@@ -20,8 +19,8 @@
       <file pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/DynamicAD_Viewer.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="86">
-              <caret line="479" column="11" lean-forward="true" selection-start-line="479" selection-start-column="11" selection-end-line="479" selection-end-column="11" />
+            <state relative-caret-position="298">
+              <caret line="520" column="22" lean-forward="true" selection-start-line="520" selection-start-column="22" selection-end-line="520" selection-end-column="22" />
               <folding>
                 <element signature="e#0#51#0" expanded="true" />
               </folding>
@@ -72,10 +71,10 @@
     </option>
   </component>
   <component name="ProjectFrameBounds" extendedState="6">
-    <option name="x" value="5752" />
-    <option name="y" value="-8" />
-    <option name="width" value="1936" />
-    <option name="height" value="1176" />
+    <option name="x" value="3831" />
+    <option name="y" value="-9" />
+    <option name="width" value="1938" />
+    <option name="height" value="1048" />
   </component>
   <component name="ProjectLevelVcsManager" settingsEditedManually="true" />
   <component name="ProjectView">
@@ -83,6 +82,7 @@
       <foldersAlwaysOnTop value="true" />
     </navigator>
     <panes>
+      <pane id="Scope" />
       <pane id="ProjectPane">
         <subPane>
           <expand>
@@ -99,7 +99,6 @@
           <select />
         </subPane>
       </pane>
-      <pane id="Scope" />
     </panes>
   </component>
   <component name="PropertiesComponent">
@@ -251,7 +250,14 @@
       <option name="project" value="LOCAL" />
       <updated>1538524203742</updated>
     </task>
-    <option name="localTasksCounter" value="14" />
+    <task id="LOCAL-00014" summary="Fixed some bugs related to random crashes">
+      <created>1550793242211</created>
+      <option name="number" value="00014" />
+      <option name="presentableId" value="LOCAL-00014" />
+      <option name="project" value="LOCAL" />
+      <updated>1550793242211</updated>
+    </task>
+    <option name="localTasksCounter" value="15" />
     <servers />
   </component>
   <component name="TodoView">
@@ -264,15 +270,15 @@
     </todo-panel>
   </component>
   <component name="ToolWindowManager">
-    <frame x="5752" y="-8" width="1936" height="1176" extended-state="6" />
+    <frame x="3833" y="-7" width="1550" height="838" extended-state="6" />
     <editor active="true" />
     <layout>
-      <window_info content_ui="combo" id="Project" order="0" visible="true" weight="0.1780822" />
+      <window_info content_ui="combo" id="Project" order="0" visible="true" weight="0.22339723" />
       <window_info id="Structure" order="1" weight="0.25" />
       <window_info id="Favorites" order="2" side_tool="true" />
       <window_info anchor="bottom" id="Message" order="0" />
       <window_info anchor="bottom" id="Find" order="1" />
-      <window_info anchor="bottom" id="Run" order="2" weight="0.16970278" />
+      <window_info active="true" anchor="bottom" id="Run" order="2" visible="true" weight="0.16855524" />
       <window_info anchor="bottom" id="Debug" order="3" weight="0.39980826" />
       <window_info anchor="bottom" id="Cvs" order="4" weight="0.25" />
       <window_info anchor="bottom" id="Inspection" order="5" weight="0.4" />
@@ -280,7 +286,7 @@
       <window_info anchor="bottom" id="Version Control" order="7" weight="0.32940018" />
       <window_info anchor="bottom" id="Terminal" order="8" weight="0.32956153" />
       <window_info anchor="bottom" id="Event Log" order="9" side_tool="true" />
-      <window_info active="true" anchor="bottom" id="Python Console" order="10" visible="true" weight="0.1581975" />
+      <window_info anchor="bottom" id="Python Console" order="10" weight="0.23371105" />
       <window_info anchor="right" id="Commander" order="0" weight="0.4" />
       <window_info anchor="right" id="Ant Build" order="1" weight="0.25" />
       <window_info anchor="right" content_ui="combo" id="Hierarchy" order="2" weight="0.25" />
@@ -297,7 +303,8 @@
     <MESSAGE value="Added Color Mode option" />
     <MESSAGE value="Implemented the ArrayCounter_RBV to control the image and cut updates" />
     <MESSAGE value="Added Exposure and Acquire time in the GUI" />
-    <option name="LAST_COMMIT_MESSAGE" value="Added Exposure and Acquire time in the GUI" />
+    <MESSAGE value="Fixed some bugs related to random crashes" />
+    <option name="LAST_COMMIT_MESSAGE" value="Fixed some bugs related to random crashes" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>
@@ -327,8 +334,8 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/DynamicAD_Viewer.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="86">
-          <caret line="479" column="11" lean-forward="true" selection-start-line="479" selection-start-column="11" selection-end-line="479" selection-end-column="11" />
+        <state relative-caret-position="298">
+          <caret line="520" column="22" lean-forward="true" selection-start-line="520" selection-start-column="22" selection-end-line="520" selection-end-column="22" />
           <folding>
             <element signature="e#0#51#0" expanded="true" />
           </folding>

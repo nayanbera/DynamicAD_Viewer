@@ -479,6 +479,14 @@ class DynamicAD_Viewer(QtGui.QWidget):
         maxm=np.max(self.verCutData)
         pos=np.where(self.verCutData>max([max([self.verCutData[0],self.verCutData[-1]]),(maxm+minm)/2]))
         verCut = self.verCutData[pos]
+        # finding center and width with polyfit
+        # if len(verCut)!=0:
+        #     c2,c1,c0=np.polyfit(self.yValues[pos],verCut,deg=2,full=False)
+        #     center=-c1/2/c2
+        #     fwhm=2.355*np.sqrt((c1**2-4*c0*c2)/8/c2**2)
+        # else:
+        #     center=0.0
+        #     fwhm=0.0
         vsum=np.sum(verCut)
         if vsum!=0:
             self.cutPeakY = np.sum(verCut * self.yValues[pos]) / vsum
@@ -489,7 +497,8 @@ class DynamicAD_Viewer(QtGui.QWidget):
             self.cutWidthY = np.abs(self.yValues[cutY[0]] - self.yValues[cutY[-1]])
         else:
             self.cutWidthY = 0.0
-        self.verCut.setTitle("Peak=%.4f, Wid=%.4f" % (1e3 * self.cutPeakY, 1e3 * self.cutWidthY))
+        self.verCut.setTitle("Peak=%7.4f, Wid=%7.4f" % (1e3 * self.cutPeakY, 1e3 * self.cutWidthY))
+        # self.verCut.setTitle("Peak=%7.4f, Wid=%7.4f" % (1e3 * center, 1e3 * fwhm))
         #self.verCut.setXRange(0,np.max(verCut))
 
     def updateHorCut(self):
@@ -502,6 +511,14 @@ class DynamicAD_Viewer(QtGui.QWidget):
         maxm=np.max(self.horCutData)
         pos=np.where(self.horCutData>max([max([self.horCutData[0],self.horCutData[-1]]),(maxm+minm)/2]))
         horCut = self.horCutData[pos]
+        # finding center and width with polyfit
+        # if len(horCut)!=0:
+        #     c2,c1,c0=np.polyfit(self.xValues[pos],horCut,deg=2,full=False)
+        #     center=-c1/2/c2
+        #     fwhm=2.355*np.sqrt((c1**2-4*c0*c2)/8/c2**2)
+        # else:
+        #     center=0.0
+        #     fwhm=0.0
         hsum=np.sum(horCut)
         if hsum!=0:
             self.cutPeakX = np.sum(horCut * self.xValues[pos]) / hsum
@@ -512,7 +529,8 @@ class DynamicAD_Viewer(QtGui.QWidget):
             self.cutWidthX = np.abs(self.xValues[cutX[0]] - self.xValues[cutX[-1]])
         else:
             self.cutWidthX = 0.0
-        self.horCut.setTitle("Peak=%.4f, Wid=%.4f" % (1e3 * self.cutPeakX, 1e3 * self.cutWidthX))
+        self.horCut.setTitle("Peak=%7.4f, Wid=%7.4f" % (1e3 * self.cutPeakX, 1e3 * self.cutWidthX))
+        # self.horCut.setTitle("Peak=%7.4f, Wid=%7.4f" % (1e3 * center, 1e3 * fwhm))
 
     def getSaveTimeSeriesFile(self):
         self.saveFile = QtGui.QFileDialog.getSaveFileName(self, "Please provide the file for saving the time-"
