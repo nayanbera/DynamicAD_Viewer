@@ -1,14 +1,16 @@
 from pyqtgraph.Qt import QtGui, QtCore, uic, QtTest
 import pyqtgraph as pg
+from PyQt5.Qt import Qt
 import numpy as np
 import sys
 import os
-from scipy.misc import imread, imsave
+from imageio import imread, imsave
 import epics
 from epics.utils import BYTES2STR
 import time
+from itertools import cycle
 import copy
-
+from numba import jit
 
 class AD_Reader(QtCore.QObject):
     imageSizeXChanged=QtCore.pyqtSignal(int)
@@ -45,21 +47,21 @@ class AD_Reader(QtCore.QObject):
 
     def onMinXChanged(self, value, **kwargs):
         self.minX=value
-        print("minX changed")
+        # print("minX changed")
 
     def onMinYChanged(self, value, **kwargs):
         self.minY=value
-        print("minY changed")
+        # print("minY changed")
 
     def onSizeXChanged(self, value, **kwargs):
         self.sizeX=value
         self.imageSizeXChanged.emit(value)
-        print("sizeX changed")
+        # print("sizeX changed")
 
     def onSizeYChanged(self, value, **kwargs):
         self.sizeY = value
         self.imageSizeYChanged.emit(value)
-        print("sizeY changed")
+        # print("sizeY changed")
 
 
 
@@ -81,7 +83,7 @@ class DynamicAD_Viewer(QtGui.QWidget):
         self.stopUpdatePushButton.setEnabled(False)
         self.show()
         self.dataDir=os.getcwd()
-        self.expTime=0.1
+        self.expTime=1.0
         self.period=1.0
         self.floatValidator=QtGui.QDoubleValidator()
         self.expTimeLineEdit.setValidator(self.floatValidator)
@@ -90,15 +92,36 @@ class DynamicAD_Viewer(QtGui.QWidget):
         self.onPixelSizeChanged()
 
         detPV, okPressed = QtGui.QInputDialog.getText(self, "Get Detector PV", "Detector PV", QtGui.QLineEdit.Normal,
-                                               "15IDPS3:")
+                                               "15IDPS1:")
         if not okPressed:
-            detPV="15IDPS3:"
+            detPV="15IDPS1:"
         self.detPVLineEdit.setText(detPV)
         self.onDetPVChanged()
         self.colorMode = self.colorModeComboBox.currentText()
         self.colorModeChanged()
         self.exposureTimeChanged()
         self.acquirePeriodChanged()
+        self.removeCrosshairPushButton.setEnabled(False)
+        self.crosshairTableWidget.setEditable(True)
+        self.crosshair=[]
+        self.colorButtons={}
+        self.showCheckBoxes={}
+        self.colors=['r', 'g', 'b', 'c', 'm', 'y', 'w']
+        self.chColors=cycle(self.colors)
+        self.crosshairPlotItem = pg.ScatterPlotItem()
+        self.vb.addItem(self.crosshairPlotItem)
+        self.vb.scene().sigMouseMoved.connect(self.image_mouseMoved)
+
+    def image_mouseMoved(self, pos):
+        """
+        Shows the mouse position of 2D Image on its crosshair label
+        """
+        pointer = self.vb.mapSceneToView(pos)
+        x, y = pointer.x(), pointer.y()
+        self.cursorXLabel.setText('Pix [X]: %d [%10.6f mm]' % (int(x/self.pixelSize),x*1e3))
+        self.cursorYLabel.setText('Pix [y]: %d [%10.6f mm]' % (int(y/self.pixelSize),y*1e3))
+
+
 
 
     def closeEvent(self,evt):
@@ -135,6 +158,99 @@ class DynamicAD_Viewer(QtGui.QWidget):
 
         self.posTimeSeriesReady.connect(self.updatePosSeriesPlot)
         self.widTimeSeriesReady.connect(self.updateWidSeriesPlot)
+
+        self.addCrosshairPushButton.clicked.connect(self.addCrosshairDlg)
+        self.removeCrosshairPushButton.clicked.connect(self.removeCrosshair)
+        self.openCrosshairPushButton.clicked.connect(self.openCrosshair)
+        self.saveCrosshairPushButton.clicked.connect(self.saveCrosshair)
+
+    def addCrosshairDlg(self):
+        self.msgDlg=QtGui.QDialog(self)
+        vlayout=QtGui.QVBoxLayout(self.msgDlg)
+        self.msgDlg.label=QtGui.QLabel('Please click on the image to select a position for the crosshair')
+        self.msgDlg.btn=QtGui.QPushButton('OK')
+        self.msgDlg.btn.clicked.connect(self.addCrosshair)
+        vlayout.addWidget(self.msgDlg.label)
+        vlayout.addWidget(self.msgDlg.btn)
+        self.msgDlg.setLayout(vlayout)
+        self.msgDlg.setModal(False)
+        self.msgDlg.show()
+
+    def addCrosshair(self):
+        rowNum = self.crosshairTableWidget.rowCount()
+        colNum = self.crosshairTableWidget.columnCount()
+        self.crosshair.append({'Name':'ch_%d'%rowNum,'Pos-X (mm)':self.crosshair_X*1e3,
+                               'Pos-Y (mm)':self.crosshair_Y*1e3,
+                               'Size (pix)':10.0,
+                               'Linewidth (pix)':1.0,
+                               'Color':next(self.chColors),
+                               'Show':True})
+        self.crosshairTableWidget.setData(self.crosshair)
+        self.colorButtons[rowNum] = pg.ColorButton(color=self.crosshair[rowNum]['Color'])
+        self.colorButtons[rowNum].sigColorChanging.connect(self.cellDataChanged)
+        self.crosshairTableWidget.setCellWidget(rowNum, 5, self.colorButtons[rowNum])
+        # self.showCheckBoxes[rowNum]=QtGui.QCheckBox()
+        self.crosshairTableWidget.item(rowNum, 6).setText('')
+        self.crosshairTableWidget.item(rowNum, 6).setFlags(Qt.ItemIsUserCheckable | Qt.ItemIsEnabled)
+        # for col in range(colNum - 1):
+        #     self.crosshairTableWidget.item(rowNum, col).setFlags(Qt.ItemIsEditable | Qt.ItemIsEnabled)
+        if self.crosshair[rowNum]['Show']:
+            self.crosshairTableWidget.item(rowNum, 6).setCheckState(Qt.Checked)  # , self.showCheckBoxes[rowNum])
+        else:
+            self.crosshairTableWidget.item(rowNum, 6).setCheckState(Qt.Unchecked)  # , self.showCheckBoxes[rowNum])
+        self.crosshairTableWidget.cellChanged.connect(self.cellDataChanged)
+        for row in range(rowNum-1):
+            self.colorButtons[row]=pg.ColorButton(color=self.crosshair[row]['Color'])
+            self.colorButtons[row].sigColorChanging.connect(self.cellDataChanged)
+            self.crosshairTableWidget.setCellWidget(row,5,self.colorButtons[row])
+            # self.showCheckBoxes[rowNum]=QtGui.QCheckBox()
+            # for col in range(colNum-1):
+            #     self.crosshairTableWidget.item(row, col).setFlags(Qt.ItemIsEditable)
+            self.crosshairTableWidget.item(row, 6).setText('')
+            self.crosshairTableWidget.item(row, 6).setFlags(Qt.ItemIsUserCheckable | Qt.ItemIsEnabled)
+            if self.crosshair[rowNum]['Show']:
+                self.crosshairTableWidget.item(row, 6).setCheckState(Qt.Checked)
+            else:
+                self.crosshairTableWidget.item(row, 6).setCheckState(Qt.Unchecked)
+            self.crosshairTableWidget.cellChanged.connect(self.cellDataChanged)
+        self.update_Crosshair_Plot()
+        self.msgDlg.accept()
+
+    def cellDataChanged(self):
+        rowNum = self.crosshairTableWidget.rowCount()
+        for row in range(rowNum):
+            self.crosshair[row]['Pos-X (mm)'] = float(self.crosshairTableWidget.item(row, 1).text())
+            self.crosshair[row]['Pos-Y (mm)'] = float(self.crosshairTableWidget.item(row, 2).text())
+            self.crosshair[row]['Size (pix)'] = float(self.crosshairTableWidget.item(row, 3).text())
+            self.crosshair[row]['Linewidth (pix)'] = float(self.crosshairTableWidget.item(row, 4).text())
+            self.crosshair[row]['Color']=self.colorButtons[row].color()
+            if self.crosshairTableWidget.item(row,6).checkState()==Qt.Checked:
+                self.crosshair[row]['Show']=True
+            else:
+                self.crosshair[row]['Show']=False
+        self.update_Crosshair_Plot()
+
+    def update_Crosshair_Plot(self):
+        crosshair_list=[]
+        for ch in self.crosshair:
+            if ch['Show']:
+                crosshair_list.append({'pos':(ch['Pos-X (mm)']*1e-3,ch['Pos-Y (mm)']*1e-3),
+                            'size':ch['Size (pix)'],
+                            'pen':None,
+                            'brush':ch['Color'],
+                            'symbol':'x'})
+        self.crosshairPlotItem.setData(crosshair_list)
+
+
+    def removeCrosshair(self):
+        pass
+
+    def openCrosshair(self):
+        pass
+
+    def saveCrosshair(self):
+        pass
+
 
     def exposureTimeChanged(self):
         if self.startUpdate:
@@ -328,7 +444,7 @@ class DynamicAD_Viewer(QtGui.QWidget):
             self.greyData = self.imgData
         else:
             self.imgData = np.rot90(data.reshape(self.adReader.sizeY, self.adReader.sizeX, 3), k=-1, axes=(0, 1))
-            self.greyData = self.imgData[..., :3]@np.array([0.299, 0.587, 0.114])
+            self.greyData = self.imgData[..., :3]#@np.array([0.299, 0.587, 0.114])
         self.imgPlot.setImage(self.imgData,autoLevels=False)
         self.imageUpdated.emit(self.imgData)
 
@@ -448,9 +564,15 @@ class DynamicAD_Viewer(QtGui.QWidget):
         pos=self.vb.mapSceneToView(evt.scenePos())
         x,y=int(pos.x()/self.pixelSize),int(pos.y()/self.pixelSize)
         if 0<=x<self.adReader.sizeX and 0<=y<self.adReader.sizeY:
-            self.verLine.setRegion(((x - self.ROIWinX / 2) * self.pixelSize, (x + self.ROIWinX / 2) * self.pixelSize))
-            self.horLine.setRegion(((y - self.ROIWinY / 2) * self.pixelSize, (y + self.ROIWinY / 2) * self.pixelSize))
-
+            if evt.double():
+                self.verLine.setRegion(((x - self.ROIWinX / 2) * self.pixelSize, (x + self.ROIWinX / 2) * self.pixelSize))
+                self.horLine.setRegion(((y - self.ROIWinY / 2) * self.pixelSize, (y + self.ROIWinY / 2) * self.pixelSize))
+        self.crosshair_X=pos.x()
+        self.crosshair_Y=pos.y()
+        try:
+            self.msgDlg.label.setText('Crosshair position selected. Please OK to draw the crosshair.')
+        except:
+            pass
 
     def onVerLineChanged(self):
         left,right=self.verLine.getRegion()
