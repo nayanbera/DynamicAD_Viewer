@@ -1,12 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="ChangeListManager">
-    <list default="true" id="b6b73cd5-7744-4e19-a4a0-d9c696f5288a" name="Default" comment="">
-      <change beforePath="$PROJECT_DIR$/.idea/DynamicAD_Viewer.iml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/DynamicAD_Viewer.iml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/misc.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/misc.xml" afterDir="false" />
+    <list default="true" id="b6b73cd5-7744-4e19-a4a0-d9c696f5288a" name="Default" comment="Added Crosshair functionality">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/DynamicAD_Viewer.py" beforeDir="false" afterPath="$PROJECT_DIR$/DynamicAD_Viewer.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/UI_Forms/DynamicAD_Viewer.ui" beforeDir="false" afterPath="$PROJECT_DIR$/UI_Forms/DynamicAD_Viewer.ui" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -179,7 +176,14 @@
       <option name="project" value="LOCAL" />
       <updated>1549222559298</updated>
     </task>
-    <option name="localTasksCounter" value="15" />
+    <task id="LOCAL-00015" summary="Added Crosshair functionality">
+      <created>1619419813044</created>
+      <option name="number" value="00015" />
+      <option name="presentableId" value="LOCAL-00015" />
+      <option name="project" value="LOCAL" />
+      <updated>1619419813044</updated>
+    </task>
+    <option name="localTasksCounter" value="16" />
     <servers />
   </component>
   <component name="TodoView">
@@ -203,13 +207,22 @@
     <MESSAGE value="Implemented the ArrayCounter_RBV to control the image and cut updates" />
     <MESSAGE value="Added Exposure and Acquire time in the GUI" />
     <MESSAGE value="Updated Dynamic_AD_Viewer.py" />
-    <option name="LAST_COMMIT_MESSAGE" value="Updated Dynamic_AD_Viewer.py" />
+    <MESSAGE value="Added Crosshair functionality" />
+    <option name="LAST_COMMIT_MESSAGE" value="Added Crosshair functionality" />
   </component>
   <component name="WindowStateProjectService">
     <state x="232" y="96" key="#com.intellij.execution.impl.EditConfigurationsDialog" timestamp="1618976156381">
       <screen x="0" y="0" width="1536" height="864" />
     </state>
     <state x="232" y="96" key="#com.intellij.execution.impl.EditConfigurationsDialog/0.0.1536.864@0.0.1536.864" timestamp="1618976156381" />
+    <state x="483" y="85" width="936" height="872" key="CommitChangelistDialog2" timestamp="1619420031909">
+      <screen x="0" y="0" width="1920" height="1178" />
+    </state>
+    <state x="483" y="85" width="936" height="872" key="CommitChangelistDialog2/0.0.1920.1178@0.0.1920.1178" timestamp="1619420031909" />
+    <state x="96" y="117" width="1720" height="817" key="DiffContextDialog" timestamp="1619420184444">
+      <screen x="0" y="0" width="1920" height="1178" />
+    </state>
+    <state x="96" y="117" width="1720" height="817" key="DiffContextDialog/0.0.1920.1178@0.0.1920.1178" timestamp="1619420184444" />
     <state x="555" y="196" key="FileChooserDialogImpl" timestamp="1618976260496">
       <screen x="0" y="0" width="1536" height="864" />
     </state>
@@ -218,6 +231,10 @@
       <screen x="0" y="0" width="1536" height="864" />
     </state>
     <state x="254" y="73" key="SettingsEditor/0.0.1536.864@0.0.1536.864" timestamp="1618976276817" />
+    <state x="556" y="265" key="Vcs.Push.Dialog.v2" timestamp="1619420016786">
+      <screen x="0" y="0" width="1920" height="1178" />
+    </state>
+    <state x="556" y="265" key="Vcs.Push.Dialog.v2/0.0.1920.1178@0.0.1920.1178" timestamp="1619420016786" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>

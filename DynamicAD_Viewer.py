@@ -10,6 +10,7 @@ from epics.utils import BYTES2STR
 import time
 from itertools import cycle
 import copy
+import time
 from numba import jit
 
 class AD_Reader(QtCore.QObject):
@@ -177,6 +178,7 @@ class DynamicAD_Viewer(QtGui.QWidget):
         self.msgDlg.show()
 
     def addCrosshair(self):
+        self.crosshairTableWidget.blockSignals(True)
         rowNum = self.crosshairTableWidget.rowCount()
         colNum = self.crosshairTableWidget.columnCount()
         self.crosshair.append({'Name':'ch_%d'%rowNum,'Pos-X (mm)':self.crosshair_X*1e3,
@@ -188,33 +190,29 @@ class DynamicAD_Viewer(QtGui.QWidget):
         self.crosshairTableWidget.setData(self.crosshair)
         self.colorButtons[rowNum] = pg.ColorButton(color=self.crosshair[rowNum]['Color'])
         self.colorButtons[rowNum].sigColorChanging.connect(self.cellDataChanged)
-        self.crosshairTableWidget.setCellWidget(rowNum, 5, self.colorButtons[rowNum])
-        # self.showCheckBoxes[rowNum]=QtGui.QCheckBox()
         self.crosshairTableWidget.item(rowNum, 6).setText('')
         self.crosshairTableWidget.item(rowNum, 6).setFlags(Qt.ItemIsUserCheckable | Qt.ItemIsEnabled)
-        # for col in range(colNum - 1):
-        #     self.crosshairTableWidget.item(rowNum, col).setFlags(Qt.ItemIsEditable | Qt.ItemIsEnabled)
         if self.crosshair[rowNum]['Show']:
             self.crosshairTableWidget.item(rowNum, 6).setCheckState(Qt.Checked)  # , self.showCheckBoxes[rowNum])
         else:
             self.crosshairTableWidget.item(rowNum, 6).setCheckState(Qt.Unchecked)  # , self.showCheckBoxes[rowNum])
+        self.crosshairTableWidget.setCellWidget(rowNum, 5, self.colorButtons[rowNum])
         self.crosshairTableWidget.cellChanged.connect(self.cellDataChanged)
-        for row in range(rowNum-1):
+        for row in range(rowNum):
             self.colorButtons[row]=pg.ColorButton(color=self.crosshair[row]['Color'])
             self.colorButtons[row].sigColorChanging.connect(self.cellDataChanged)
-            self.crosshairTableWidget.setCellWidget(row,5,self.colorButtons[row])
-            # self.showCheckBoxes[rowNum]=QtGui.QCheckBox()
-            # for col in range(colNum-1):
-            #     self.crosshairTableWidget.item(row, col).setFlags(Qt.ItemIsEditable)
             self.crosshairTableWidget.item(row, 6).setText('')
             self.crosshairTableWidget.item(row, 6).setFlags(Qt.ItemIsUserCheckable | Qt.ItemIsEnabled)
-            if self.crosshair[rowNum]['Show']:
+            if self.crosshair[row]['Show']:
                 self.crosshairTableWidget.item(row, 6).setCheckState(Qt.Checked)
             else:
                 self.crosshairTableWidget.item(row, 6).setCheckState(Qt.Unchecked)
             self.crosshairTableWidget.cellChanged.connect(self.cellDataChanged)
-        self.update_Crosshair_Plot()
+            self.crosshairTableWidget.setCellWidget(row, 5, self.colorButtons[row])
+        self.updateCrosshairPlot()
         self.msgDlg.accept()
+        self.crosshairTableWidget.blockSignals(False)
+        self.removeCrosshairPushButton.setEnabled(True)
 
     def cellDataChanged(self):
         rowNum = self.crosshairTableWidget.rowCount()
@@ -228,9 +226,9 @@ class DynamicAD_Viewer(QtGui.QWidget):
                 self.crosshair[row]['Show']=True
             else:
                 self.crosshair[row]['Show']=False
-        self.update_Crosshair_Plot()
+        self.updateCrosshairPlot()
 
-    def update_Crosshair_Plot(self):
+    def updateCrosshairPlot(self):
         crosshair_list=[]
         for ch in self.crosshair:
             if ch['Show']:
@@ -243,13 +241,59 @@ class DynamicAD_Viewer(QtGui.QWidget):
 
 
     def removeCrosshair(self):
-        pass
+        self.crosshairTableWidget.blockSignals(True)
+        indices=self.crosshairTableWidget.selectionModel().selectedRows()
+        for index in indices:
+            self.crosshair.pop(index.row())
+        self.crosshairTableWidget.setData(self.crosshair)
+        self.crosshairTableWidget.blockSignals(False)
+        self.updateCrosshairPlot()
+
 
     def openCrosshair(self):
-        pass
+        fname=QtGui.QFileDialog.getOpenFileName(self,'Open Crosshair File','','Crosshair Files (*.chr)')[0]
+        if fname!='':
+            fh=open(fname,'r')
+            lines=fh.readlines()
+            keys=lines[1].strip()[1:].split('\t')
+            self.crosshair = []
+            for line in lines:
+                if line[0]!='#':
+                    values=line.strip().split('\t')
+                    ch={}
+                    for i,value in enumerate(values):
+                        try:
+                            ch[keys[i]]=float(value)
+                        except:
+                            ch[keys[i]]=value
+                    self.crosshair.append(ch)
+            print(self.crosshair)
+            self.crosshairTableWidget.blockSignals(True)
+            self.crosshairTableWidget.setData(self.crosshair)
+            self.crosshairTableWidget.blockSignals(False)
+            self.updateCrosshairPlot()
+
 
     def saveCrosshair(self):
-        pass
+        if self.crosshairTableWidget.rowCount()>0:
+            fname=QtGui.QFileDialog.getSaveFileName(self,'Save file as','', 'Crosshair Files (*.chr)')[0]
+            if fname!='':
+                if os.path.splitext(fname)[1]=='':
+                    fname=fname+'.chr'
+                line='# Crosshair file saved on %s\n'%time.ctime()
+                line+='#'
+                for key in self.crosshair[0]:
+                    line+='%s\t'%key
+                line+='\n'
+                for ch in self.crosshair:
+                    for key in ch.keys():
+                        line+=str(ch[key])+'\t'
+                    line+='\n'
+                fh=open(fname,'w')
+                fh.writelines(line)
+                fh.close()
+
+
 
 
     def exposureTimeChanged(self):
