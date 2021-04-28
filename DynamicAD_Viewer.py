@@ -109,8 +109,8 @@ class DynamicAD_Viewer(QtGui.QWidget):
         self.showCheckBoxes={}
         self.colors=['r', 'g', 'b', 'c', 'm', 'y', 'w']
         self.chColors=cycle(self.colors)
-        self.crosshairPlotItem = pg.ScatterPlotItem()
-        self.vb.addItem(self.crosshairPlotItem)
+        self.crosshairPlotItems = {}# pg.ScatterPlotItem()
+#        self.vb.addItem(self.crosshairPlotItem)
         self.vb.scene().sigMouseMoved.connect(self.image_mouseMoved)
 
     def image_mouseMoved(self, pos):
@@ -165,6 +165,21 @@ class DynamicAD_Viewer(QtGui.QWidget):
         self.openCrosshairPushButton.clicked.connect(self.openCrosshair)
         self.saveCrosshairPushButton.clicked.connect(self.saveCrosshair)
 
+        self.hideHorizontalROICheckBox.stateChanged.connect(self.horizontalROI_viewChanged)
+        self.hideVerticalROICheckBox.stateChanged.connect(self.verticalROI_viewChanged)
+
+    def horizontalROI_viewChanged(self):
+        if self.hideHorizontalROICheckBox.checkState()==Qt.Checked:
+            self.horLine.hide()
+        else:
+            self.horLine.show()
+
+    def verticalROI_viewChanged(self):
+        if self.hideVerticalROICheckBox.checkState() == Qt.Checked:
+            self.verLine.hide()
+        else:
+            self.verLine.show()
+
     def addCrosshairDlg(self):
         self.msgDlg=QtGui.QDialog(self)
         vlayout=QtGui.QVBoxLayout(self.msgDlg)
@@ -181,34 +196,38 @@ class DynamicAD_Viewer(QtGui.QWidget):
         self.crosshairTableWidget.blockSignals(True)
         rowNum = self.crosshairTableWidget.rowCount()
         colNum = self.crosshairTableWidget.columnCount()
-        self.crosshair.append({'Name':'ch_%d'%rowNum,'Pos-X (mm)':self.crosshair_X*1e3,
+        print('ch_%d'%rowNum, self.crosshairTableWidget.item(rowNum - 1, 0).text())
+        if rowNum>0 and 'ch_%d'%rowNum==self.crosshairTableWidget.item(rowNum-1,0).text():
+            name='ch_%d'%(rowNum+1)
+        else:
+            name='ch_%d'%rowNum
+        self.crosshair.append({'Name':name,'Pos-X (mm)':self.crosshair_X*1e3,
                                'Pos-Y (mm)':self.crosshair_Y*1e3,
-                               'Size (pix)':10.0,
                                'Linewidth (pix)':1.0,
                                'Color':next(self.chColors),
                                'Show':True})
         self.crosshairTableWidget.setData(self.crosshair)
         self.colorButtons[rowNum] = pg.ColorButton(color=self.crosshair[rowNum]['Color'])
         self.colorButtons[rowNum].sigColorChanging.connect(self.cellDataChanged)
-        self.crosshairTableWidget.item(rowNum, 6).setText('')
-        self.crosshairTableWidget.item(rowNum, 6).setFlags(Qt.ItemIsUserCheckable | Qt.ItemIsEnabled)
+        self.crosshairTableWidget.item(rowNum, 5).setText('')
+        self.crosshairTableWidget.item(rowNum, 5).setFlags(Qt.ItemIsUserCheckable | Qt.ItemIsEnabled)
         if self.crosshair[rowNum]['Show']:
-            self.crosshairTableWidget.item(rowNum, 6).setCheckState(Qt.Checked)  # , self.showCheckBoxes[rowNum])
+            self.crosshairTableWidget.item(rowNum, 5).setCheckState(Qt.Checked)  # , self.showCheckBoxes[rowNum])
         else:
-            self.crosshairTableWidget.item(rowNum, 6).setCheckState(Qt.Unchecked)  # , self.showCheckBoxes[rowNum])
-        self.crosshairTableWidget.setCellWidget(rowNum, 5, self.colorButtons[rowNum])
+            self.crosshairTableWidget.item(rowNum, 5).setCheckState(Qt.Unchecked)  # , self.showCheckBoxes[rowNum])
+        self.crosshairTableWidget.setCellWidget(rowNum, 4, self.colorButtons[rowNum])
         self.crosshairTableWidget.cellChanged.connect(self.cellDataChanged)
         for row in range(rowNum):
             self.colorButtons[row]=pg.ColorButton(color=self.crosshair[row]['Color'])
             self.colorButtons[row].sigColorChanging.connect(self.cellDataChanged)
-            self.crosshairTableWidget.item(row, 6).setText('')
-            self.crosshairTableWidget.item(row, 6).setFlags(Qt.ItemIsUserCheckable | Qt.ItemIsEnabled)
+            self.crosshairTableWidget.item(row, 5).setText('')
+            self.crosshairTableWidget.item(row, 5).setFlags(Qt.ItemIsUserCheckable | Qt.ItemIsEnabled)
             if self.crosshair[row]['Show']:
-                self.crosshairTableWidget.item(row, 6).setCheckState(Qt.Checked)
+                self.crosshairTableWidget.item(row, 5).setCheckState(Qt.Checked)
             else:
-                self.crosshairTableWidget.item(row, 6).setCheckState(Qt.Unchecked)
+                self.crosshairTableWidget.item(row, 5).setCheckState(Qt.Unchecked)
             self.crosshairTableWidget.cellChanged.connect(self.cellDataChanged)
-            self.crosshairTableWidget.setCellWidget(row, 5, self.colorButtons[row])
+            self.crosshairTableWidget.setCellWidget(row, 4, self.colorButtons[row])
         self.updateCrosshairPlot()
         self.msgDlg.accept()
         self.crosshairTableWidget.blockSignals(False)
@@ -219,41 +238,96 @@ class DynamicAD_Viewer(QtGui.QWidget):
         for row in range(rowNum):
             self.crosshair[row]['Pos-X (mm)'] = float(self.crosshairTableWidget.item(row, 1).text())
             self.crosshair[row]['Pos-Y (mm)'] = float(self.crosshairTableWidget.item(row, 2).text())
-            self.crosshair[row]['Size (pix)'] = float(self.crosshairTableWidget.item(row, 3).text())
-            self.crosshair[row]['Linewidth (pix)'] = float(self.crosshairTableWidget.item(row, 4).text())
+            self.crosshair[row]['Linewidth (pix)'] = float(self.crosshairTableWidget.item(row, 3).text())
             self.crosshair[row]['Color']=self.colorButtons[row].color()
-            if self.crosshairTableWidget.item(row,6).checkState()==Qt.Checked:
+            if self.crosshairTableWidget.item(row,5).checkState()==Qt.Checked:
                 self.crosshair[row]['Show']=True
             else:
                 self.crosshair[row]['Show']=False
         self.updateCrosshairPlot()
 
     def updateCrosshairPlot(self):
-        crosshair_list=[]
-        for ch in self.crosshair:
+        for i, ch in enumerate(self.crosshair):
             if ch['Show']:
-                crosshair_list.append({'pos':(ch['Pos-X (mm)']*1e-3,ch['Pos-Y (mm)']*1e-3),
-                            'size':ch['Size (pix)'],
-                            'pen':None,
-                            'brush':ch['Color'],
-                            'symbol':'x'})
-        self.crosshairPlotItem.setData(crosshair_list)
+                # crosshair_list.append({'pos':(ch['Pos-X (mm)']*1e-3,ch['Pos-Y (mm)']*1e-3),
+                #             'size':ch['Size (pix)'],
+                #             'pen':None,
+                #             'brush':ch['Color'],
+                #             'symbol':'x'})
+                try:
+                    self.crosshairPlotItems[ch['Name']]['vertical'].setValue(ch['Pos-X (mm)']*1e-3)
+                    self.crosshairPlotItems[ch['Name']]['vertical'].setPen(pg.mkPen(ch['Color'],width=ch['Linewidth ('
+                                                                                                       'pix)']))
+                    self.crosshairPlotItems[ch['Name']]['horizontal'].setValue(ch['Pos-Y (mm)']*1e-3)
+                    self.crosshairPlotItems[ch['Name']]['horizontal'].setPen(pg.mkPen(ch['Color'], width=ch['Linewidth ('
+                                                                                                 'pix)']))
+                except:
+                    self.crosshairPlotItems[ch['Name']]={
+                        'vertical':pg.InfiniteLine(pos=ch['Pos-X (mm)']*1e-3, angle=90, pen=pg.mkPen(ch['Color'],
+                                                                                                   width=ch[
+                                                                                                       'Linewidth ('
+                                                                                                       'pix)']),
+                                                   movable=False, label=ch['Name']),
+                        'horizontal': pg.InfiniteLine(pos=ch['Pos-Y (mm)'] * 1e-3, angle=0, pen=pg.mkPen(ch['Color'],
+                                                                                                        width=ch[
+                                                                                                            'Linewidth ('
+                                                                                                            'pix)']),
+                                                    movable=False, label=ch['Name'])
+                    }
+                    self.vb.addItem(self.crosshairPlotItems[ch['Name']]['vertical'])
+                    self.vb.addItem(self.crosshairPlotItems[ch['Name']]['horizontal'])
+
+                self.crosshairPlotItems[ch['Name']]['vertical'].show()
+                self.crosshairPlotItems[ch['Name']]['horizontal'].show()
+            else:
+                self.crosshairPlotItems[ch['Name']]['vertical'].hide()
+                self.crosshairPlotItems[ch['Name']]['horizontal'].hide()
 
 
     def removeCrosshair(self):
         self.crosshairTableWidget.blockSignals(True)
         indices=self.crosshairTableWidget.selectionModel().selectedRows()
-        for index in indices:
+        for index in sorted(indices, reverse=True):
+            name=self.crosshairTableWidget.item(index.row(),0).text()
+            self.vb.removeItem(self.crosshairPlotItems[name]['vertical'])
+            self.vb.removeItem(self.crosshairPlotItems[name]['horizontal'])
             self.crosshair.pop(index.row())
+            del self.crosshairPlotItems[name]
+        self.crosshairTableWidget.setData(self.crosshair)
+        rowNum = self.crosshairTableWidget.rowCount()
+        for row in range(rowNum):
+            self.colorButtons[row] = pg.ColorButton(color=self.crosshair[row]['Color'])
+            self.colorButtons[row].sigColorChanging.connect(self.cellDataChanged)
+            self.crosshairTableWidget.item(row, 5).setText('')
+            self.crosshairTableWidget.item(row, 5).setFlags(Qt.ItemIsUserCheckable | Qt.ItemIsEnabled)
+            if self.crosshair[row]['Show']:
+                self.crosshairTableWidget.item(row, 5).setCheckState(Qt.Checked)
+            else:
+                self.crosshairTableWidget.item(row, 5).setCheckState(Qt.Unchecked)
+            self.crosshairTableWidget.cellChanged.connect(self.cellDataChanged)
+            self.crosshairTableWidget.setCellWidget(row, 4, self.colorButtons[row])
+        self.crosshairTableWidget.blockSignals(False)
+        if self.crosshairTableWidget.rowCount()==0:
+            self.removeCrosshairPushButton.setEnabled(False)
+
+    def removeAllCrosshair(self):
+        self.crosshairTableWidget.blockSignals(True)
+        for row in range(self.crosshairTableWidget.rowCount()-1,-1,-1):
+            name = self.crosshairTableWidget.item(row, 0).text()
+            self.vb.removeItem(self.crosshairPlotItems[name]['vertical'])
+            self.vb.removeItem(self.crosshairPlotItems[name]['horizontal'])
+            self.crosshair.pop(row)
+            del self.crosshairPlotItems[name]
         self.crosshairTableWidget.setData(self.crosshair)
         self.crosshairTableWidget.blockSignals(False)
-        self.updateCrosshairPlot()
+        self.removeCrosshairPushButton.setEnabled(False)
 
 
     def openCrosshair(self):
         fname=QtGui.QFileDialog.getOpenFileName(self,'Open Crosshair File','','Crosshair Files (*.chr)')[0]
         if fname!='':
             fh=open(fname,'r')
+            self.removeAllCrosshair()
             lines=fh.readlines()
             keys=lines[1].strip()[1:].split('\t')
             self.crosshair = []
@@ -267,11 +341,24 @@ class DynamicAD_Viewer(QtGui.QWidget):
                         except:
                             ch[keys[i]]=value
                     self.crosshair.append(ch)
-            print(self.crosshair)
             self.crosshairTableWidget.blockSignals(True)
             self.crosshairTableWidget.setData(self.crosshair)
+            rowNum=self.crosshairTableWidget.rowCount()
+            for row in range(rowNum):
+                self.colorButtons[row] = pg.ColorButton(color=self.crosshair[row]['Color'])
+                self.colorButtons[row].sigColorChanging.connect(self.cellDataChanged)
+                self.crosshairTableWidget.item(row, 5).setText('')
+                self.crosshairTableWidget.item(row, 5).setFlags(Qt.ItemIsUserCheckable | Qt.ItemIsEnabled)
+                if self.crosshair[row]['Show']:
+                    self.crosshairTableWidget.item(row, 5).setCheckState(Qt.Checked)
+                else:
+                    self.crosshairTableWidget.item(row, 5).setCheckState(Qt.Unchecked)
+                self.crosshairTableWidget.cellChanged.connect(self.cellDataChanged)
+                self.crosshairTableWidget.setCellWidget(row, 4, self.colorButtons[row])
             self.crosshairTableWidget.blockSignals(False)
+            self.crosshairPlotItems={}
             self.updateCrosshairPlot()
+            self.removeCrosshairPushButton.setEnabled(True)
 
 
     def saveCrosshair(self):

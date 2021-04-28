@@ -104,6 +104,20 @@
            </property>
           </spacer>
          </item>
+         <item>
+          <widget class="QCheckBox" name="hideHorizontalROICheckBox">
+           <property name="text">
+            <string>Hide Horizontal ROI</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QCheckBox" name="hideVerticalROICheckBox">
+           <property name="text">
+            <string>Hide Vertical ROI</string>
+           </property>
+          </widget>
+         </item>
         </layout>
        </item>
       </layout>
