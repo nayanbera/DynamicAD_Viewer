@@ -263,7 +263,6 @@ class DynamicAD_Viewer(QtGui.QWidget):
                     self.crosshairPlotItems[ch['Name']]['horizontal'].setAngle(ch['Angle (deg)'])
                     self.crosshairPlotItems[ch['Name']]['horizontal'].setPen(pg.mkPen(ch['Color'], width=ch['Linewidth ('
                                                                                                  'pix)']))
-                    print('ch updated')
                 except:
                     self.crosshairPlotItems[ch['Name']]={
                         'vertical':pg.InfiniteLine(pos=(ch['Pos-X (mm)']*1e-3,ch['Pos-Y (mm)']*1e-3), angle=90+ch[
