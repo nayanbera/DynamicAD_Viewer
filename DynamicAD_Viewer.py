@@ -98,6 +98,7 @@ class DynamicAD_Viewer(QtGui.QWidget):
             detPV="15IDPS1:"
         self.detPVLineEdit.setText(detPV)
         self.onDetPVChanged()
+        self.loadPVs()
         self.colorMode = self.colorModeComboBox.currentText()
         self.colorModeChanged()
         self.exposureTimeChanged()
@@ -123,8 +124,11 @@ class DynamicAD_Viewer(QtGui.QWidget):
         self.cursorXLabel.setText('Pix [X]: %d [%10.6f mm]' % (int(x/self.pixelSize),x*1e3))
         self.cursorYLabel.setText('Pix [y]: %d [%10.6f mm]' % (int(y/self.pixelSize),y*1e3))
 
-
-
+    def loadPVs(self):
+        self.expTimeLineEdit.setPV(self.detPV+'cam1:AcquireTime')
+        self.acquirePeriodLineEdit.setPV(self.detPV+'cam1:AcquirePeriod')
+        self.expTimeRBV.setPV(self.detPV+'cam1:AcquireTime_RBV')
+        self.acquirePeriodRBV.setPV(self.detPV + 'cam1:AcquirePeriod_RBV')
 
     def closeEvent(self,evt):
         if self.adReader.connected:
@@ -139,8 +143,8 @@ class DynamicAD_Viewer(QtGui.QWidget):
 
     def init_signals(self):
         self.detPVLineEdit.returnPressed.connect(self.onDetPVChanged)
-        self.expTimeLineEdit.returnPressed.connect(self.exposureTimeChanged)
-        self.acquirePeriodLineEdit.returnPressed.connect(self.acquirePeriodChanged)
+        # self.expTimeLineEdit.returnPressed.connect(self.exposureTimeChanged)
+        # self.acquirePeriodLineEdit.returnPressed.connect(self.acquirePeriodChanged)
         self.openImageFilePushButton.clicked.connect(self.openImageFile)
 
         self.imageUpdated.connect(self.updatePlots)

@@ -19,18 +19,8 @@
      <property name="orientation">
       <enum>Qt::Horizontal</enum>
      </property>
-     <widget class="QWidget" name="layoutWidget">
+     <widget class="QWidget" name="">
       <layout class="QGridLayout" name="gridLayout">
-       <item row="0" column="0">
-        <widget class="GraphicsLayoutWidget" name="imageLayout">
-         <property name="minimumSize">
-          <size>
-           <width>0</width>
-           <height>0</height>
-          </size>
-         </property>
-        </widget>
-       </item>
        <item row="0" column="1">
         <widget class="GraphicsLayoutWidget" name="verCutLayout">
          <property name="sizePolicy">
@@ -42,7 +32,7 @@
          <property name="minimumSize">
           <size>
            <width>250</width>
-           <height>511</height>
+           <height>520</height>
           </size>
          </property>
          <property name="maximumSize">
@@ -53,32 +43,16 @@
          </property>
         </widget>
        </item>
-       <item row="1" column="0">
-        <widget class="GraphicsLayoutWidget" name="horCutLayout">
-         <property name="sizePolicy">
-          <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
-           <horstretch>0</horstretch>
-           <verstretch>0</verstretch>
-          </sizepolicy>
-         </property>
-         <property name="minimumSize">
-          <size>
-           <width>591</width>
-           <height>200</height>
-          </size>
-         </property>
-         <property name="maximumSize">
-          <size>
-           <width>16777215</width>
-           <height>250</height>
-          </size>
-         </property>
-        </widget>
-       </item>
        <item row="1" column="1">
         <layout class="QVBoxLayout" name="verticalLayout_3">
          <item>
           <widget class="QLabel" name="cursorXLabel">
+           <property name="sizePolicy">
+            <sizepolicy hsizetype="Minimum" vsizetype="Preferred">
+             <horstretch>0</horstretch>
+             <verstretch>0</verstretch>
+            </sizepolicy>
+           </property>
            <property name="text">
             <string>Pix [X]:</string>
            </property>
@@ -86,6 +60,12 @@
          </item>
          <item>
           <widget class="QLabel" name="cursorYLabel">
+           <property name="sizePolicy">
+            <sizepolicy hsizetype="Minimum" vsizetype="Preferred">
+             <horstretch>0</horstretch>
+             <verstretch>0</verstretch>
+            </sizepolicy>
+           </property>
            <property name="text">
             <string>Pix [Y]:</string>
            </property>
@@ -119,6 +99,38 @@
           </widget>
          </item>
         </layout>
+       </item>
+       <item row="0" column="0">
+        <widget class="GraphicsLayoutWidget" name="imageLayout">
+         <property name="minimumSize">
+          <size>
+           <width>520</width>
+           <height>520</height>
+          </size>
+         </property>
+        </widget>
+       </item>
+       <item row="1" column="0">
+        <widget class="GraphicsLayoutWidget" name="horCutLayout">
+         <property name="sizePolicy">
+          <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
+           <horstretch>0</horstretch>
+           <verstretch>0</verstretch>
+          </sizepolicy>
+         </property>
+         <property name="minimumSize">
+          <size>
+           <width>520</width>
+           <height>250</height>
+          </size>
+         </property>
+         <property name="maximumSize">
+          <size>
+           <width>16777215</width>
+           <height>250</height>
+          </size>
+         </property>
+        </widget>
        </item>
       </layout>
      </widget>
@@ -206,7 +218,7 @@
           </widget>
          </item>
          <item>
-          <widget class="QLineEdit" name="expTimeLineEdit">
+          <widget class="PVLineEdit" name="expTimeLineEdit">
            <property name="sizePolicy">
             <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
              <horstretch>0</horstretch>
@@ -225,6 +237,13 @@
              <height>16777215</height>
             </size>
            </property>
+           <property name="text">
+            <string>0.1</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="PVText" name="expTimeRBV">
            <property name="text">
             <string>0.1</string>
            </property>
@@ -260,7 +279,7 @@
           </widget>
          </item>
          <item>
-          <widget class="QLineEdit" name="acquirePeriodLineEdit">
+          <widget class="PVLineEdit" name="acquirePeriodLineEdit">
            <property name="sizePolicy">
             <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
              <horstretch>0</horstretch>
@@ -279,6 +298,13 @@
              <height>16777215</height>
             </size>
            </property>
+           <property name="text">
+            <string>1.0</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="PVText" name="acquirePeriodRBV">
            <property name="text">
             <string>1.0</string>
            </property>
@@ -759,6 +785,16 @@
    <extends>QWidget</extends>
    <header>pyqtgraph</header>
    <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>PVLineEdit</class>
+   <extends>QLineEdit</extends>
+   <header>pyepics_Qt</header>
+  </customwidget>
+  <customwidget>
+   <class>PVText</class>
+   <extends>QLabel</extends>
+   <header>pyepics_Qt</header>
   </customwidget>
  </customwidgets>
  <resources/>
