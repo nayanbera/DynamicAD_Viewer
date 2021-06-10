@@ -1,11 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="ChangeListManager">
-    <list default="true" id="b6b73cd5-7744-4e19-a4a0-d9c696f5288a" name="Default" comment="Making the crosshair capability fully functional">
-      <change afterPath="$PROJECT_DIR$/pyepics_Qt.py" afterDir="false" />
+    <list default="true" id="b6b73cd5-7744-4e19-a4a0-d9c696f5288a" name="Default" comment="Using pyepics_Qt for AcquireTime and AcquirePeriod">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/DynamicAD_Viewer.py" beforeDir="false" afterPath="$PROJECT_DIR$/DynamicAD_Viewer.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/UI_Forms/DynamicAD_Viewer.ui" beforeDir="false" afterPath="$PROJECT_DIR$/UI_Forms/DynamicAD_Viewer.ui" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -214,7 +211,14 @@
       <option name="project" value="LOCAL" />
       <updated>1621436953383</updated>
     </task>
-    <option name="localTasksCounter" value="20" />
+    <task id="LOCAL-00020" summary="Using pyepics_Qt for AcquireTime and AcquirePeriod">
+      <created>1623357113071</created>
+      <option name="number" value="00020" />
+      <option name="presentableId" value="LOCAL-00020" />
+      <option name="project" value="LOCAL" />
+      <updated>1623357113071</updated>
+    </task>
+    <option name="localTasksCounter" value="21" />
     <servers />
   </component>
   <component name="TodoView">
@@ -240,7 +244,8 @@
     <MESSAGE value="Updated Dynamic_AD_Viewer.py" />
     <MESSAGE value="Added Crosshair functionality" />
     <MESSAGE value="Making the crosshair capability fully functional" />
-    <option name="LAST_COMMIT_MESSAGE" value="Making the crosshair capability fully functional" />
+    <MESSAGE value="Using pyepics_Qt for AcquireTime and AcquirePeriod" />
+    <option name="LAST_COMMIT_MESSAGE" value="Using pyepics_Qt for AcquireTime and AcquirePeriod" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>
